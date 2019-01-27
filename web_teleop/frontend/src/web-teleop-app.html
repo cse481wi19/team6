@@ -4,6 +4,7 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/ros-websocket/ros-websocket.html">
 <link rel="import" href="../bower_components/ros-topic/ros-topic.html">
+<link rel="import" href="../bower_components/ros-service/ros-service.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-slider/paper-slider.html">
 <link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
@@ -28,6 +29,9 @@
       paper-button {
         background-color: #eee;
       }
+      #driving {
+        display: inline-block;
+      }
     </style>
     <!-- HTML TEMPLATE
          Here is where you add the HTML for your element.
@@ -48,16 +52,50 @@
       on-message="_handleTorsoHeight">
     </ros-topic>
 
+    <ros-topic
+      id="baseTopic"
+      ros="{{ros}}"
+      topic="cmd_vel"
+      msg-type="geometry_msgs/Twist">
+    </ros-topic>
+
+    <ros-service
+      id="torsoService"
+      on-response="_handleTorsoSuccess"
+      on-fail="_handleTorsoError"
+      name="/web_teleop/set_torso"
+      ros="{{ros}}"
+      service-type="web_teleop/SetTorso">
+    </ros-service>
+
     <h1>Fetch teleop</h1>
     [[status]]
     <div>
       Torso height: [[_round(torsoHeight.data, 0.001)]] meters
     </div>
+
     <div class="layout horizontal center">
       <paper-slider min="0" max="0.4" step="0.01" editable
         value="{{desiredTorsoHeight}}"></paper-slider>
-      <paper-button>Set torso</paper-button>
+      <paper-button on-tap="_setTorso">Set torso</paper-button>
     </div>
+
+    <div id="driving" class="layout vertical">
+      <div class="layout horizontal">
+        <div class="flex"></div>
+        <paper-button
+          on-down="_startForward"
+          on-up="_endBaseCommand"
+        >Forward</paper-button>
+        <div class="flex"></div>
+      </div>
+      <div class="layout horizontal">
+        <paper-button>Left</paper-button>
+        <paper-button>Back</paper-button>
+        <paper-button>Right</paper-button>
+      </div>
+    </div>
+
   </template>
   <script>
     /*
@@ -70,6 +108,16 @@
       // List properties here, which we will not use in this lab.
       static get properties() {
         return {};
+      }
+      _setTorso() {
+        this.status = 'Setting torso to ' + this.desiredTorsoHeight + ' meters...';
+        this.$.torsoService.call({height: this.desiredTorsoHeight});
+      }
+      _handleTorsoSuccess() {
+        this.status = 'Set torso to ' + this.desiredTorsoHeight + ' meters.';
+      }
+      _handleTorsoError(evt) {
+        this.status = 'Error: ' + evt.detail;
       }
       _round(val, precision) {
         return Math.round(val/precision) * precision;
