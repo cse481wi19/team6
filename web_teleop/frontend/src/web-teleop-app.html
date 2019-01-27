@@ -47,6 +47,22 @@
       on-message="_handleTorsoHeight"
     ></ros-topic>
 
+    <ros-topic auto
+      ros="{{ros}}"
+      topic="joint_state_republisher/head_pan_joint"
+      msg-type="std_msgs/Float64"
+      last-message="{{headPan}}"
+      on-message="_handleHeadPan"
+    ></ros-topic>
+
+    <ros-topic auto
+      ros="{{ros}}"
+      topic="joint_state_republisher/head_tilt_joint"
+      msg-type="std_msgs/Float64"
+      last-message="{{headTilt}}"
+      on-message="_handleHeadTilt"
+    ></ros-topic>
+
     <ros-topic
       id="baseTopic"
       ros="{{ros}}"
@@ -64,6 +80,15 @@
 		  service-type="web_teleop/SetTorso"
 		></ros-service>
 
+    <ros-service
+		  id="headService"
+		  on-response="_handleHeadSuccess"
+		  on-fail="_handleHeadError"
+		  name="/web_teleop/set_head"
+		  ros="{{ros}}"
+		  service-type="web_teleop/SetHead"
+		></ros-service>
+
 
     <h1>Fetch teleop</h1>
     {{status}}
@@ -78,6 +103,21 @@
         value="{{desiredTorsoHeight}}"></paper-slider>
       <paper-button on-click="_setTorso">Set torso</paper-button>
     </div>
+
+    <div>
+      Head pan: [[_round(headPan.data, 0.001)]]
+    </div>
+    <div>
+      Head tilt: [[_round(headTilt.data, 0.001)]]
+    </div>
+    <div class="layout horizontal center">
+      <paper-slider min="-1.57" max="1.57" step="0.05" editable
+        value="{{desiredHeadPan}}"></paper-slider>
+      <paper-slider min="-0.785" max="1.57" step="0.05" editable
+        value="{{desiredHeadTilt}}"></paper-slider>
+      <paper-button on-click="_setHead">Set head</paper-button>
+    </div>
+
     <div id="driving" class="layout vertical">
       <div class="layout horizontal">
         <div class="flex"></div>
@@ -124,6 +164,15 @@
         //console.log(msg);
       }
 
+      _handleHeadPan(evt) {
+        var msg = evt.detail;
+        //console.log(msg);
+      }
+      _handleHeadTilt(evt) {
+        var msg = evt.detail;
+        //console.log(msg);
+      }
+
       // Rounds val to a given precision, where the precision is given as the
       // step size between numbers in the output range.
       // E.g., _round(0.053, 0.1) = 0.1
@@ -141,6 +190,19 @@
         this.status = 'Set torso to ' + this.desiredTorsoHeight + ' meters.';
       }
 			_handleTorsoError(evt) {
+        this.status = 'Error: ' + evt.detail;
+      }
+
+      _setHead() {
+        this.status = 'Setting head pan to ' + this.desiredHeadPan + ' ...';
+        this.status = 'Setting head tilt to ' + this.desiredHeadTilt + ' ...';
+        this.$.headService.call({pan: this.desiredHeadPan, tilt: this.desiredHeadTilt});
+      }
+			_handleHeadSuccess() {
+        this.status = 'Set head pan to ' + this.desiredHeadPan;
+          this.status = 'Set head tilt to ' + this.desiredHeadTilt;
+      }
+			_handleHeadError(evt) {
         this.status = 'Error: ' + evt.detail;
       }
 
