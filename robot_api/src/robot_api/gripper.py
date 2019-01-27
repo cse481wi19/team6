@@ -46,8 +46,8 @@ class Gripper(object):
         # TODO: Create goal
         # TODO: Send goal
         # TODO: Wait for result
-        if (max_effort < Gripper.MIN_EFFORT):
-            rospy.logerr("max_effort < 35N!!!")
+        assert(max_effort >= Gripper.MIN_EFFORT)
+
         goal = control_msgs.msg.GripperCommandGoal()
         goal.command.position=CLOSED_POS
         goal.command.max_effort=max_effort
