@@ -28,9 +28,14 @@
       }
       paper-button {
         background-color: #eee;
+        user-select: none;
       }
       #driving {
         display: inline-block;
+      }
+      #camera img {
+        width: 100%
+        height: auto;
       }
     </style>
     <!-- HTML TEMPLATE
@@ -70,6 +75,9 @@
 
     <h1>Fetch teleop</h1>
     [[status]]
+    <div id="camera">
+      <img src="//[[hostname]]:8000/stream?topic=/head_camera/rgb/image_raw"></img>
+    </div>
     <div>
       Torso height: [[_round(torsoHeight.data, 0.001)]] meters
     </div>
@@ -83,16 +91,13 @@
     <div id="driving" class="layout vertical">
       <div class="layout horizontal">
         <div class="flex"></div>
-        <paper-button
-          on-down="_startForward"
-          on-up="_endBaseCommand"
-        >Forward</paper-button>
+        <paper-button on-down="_startForward" on-up="_endBaseCommand">Forward</paper-button>
         <div class="flex"></div>
       </div>
       <div class="layout horizontal">
-        <paper-button>Left</paper-button>
-        <paper-button>Back</paper-button>
-        <paper-button>Right</paper-button>
+        <paper-button on-down="_startLeft" on-up="_endBaseCommand">Left</paper-button>
+        <paper-button on-down="_startBackward" on-up="_endBaseCommand">Back</paper-button>
+        <paper-button on-down="_startRight" on-up="_endBaseCommand">Right</paper-button>
       </div>
     </div>
 
@@ -102,13 +107,114 @@
       JAVASCRIPT SECTION
       Here is where you add the code that controls the behavior of the element.
     */
-
     class WebTeleopApp extends Polymer.Element {
       static get is() { return 'web-teleop-app'; }
       // List properties here, which we will not use in this lab.
       static get properties() {
         return {};
       }
+      ready() {
+        super.ready();
+        this.hostname = window.location.hostname;
+      }
+      _startForward(evt) {
+        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
+        this.status = 'Driving forward...';
+        var baseTopic = this.$.baseTopic; // Get <ros-topic>
+        if (this.baseCommand) {
+          // The timer should not be set at this point, but clear it just in case
+          clearInterval(this.baseCommand);
+        }
+        this.baseCommand = setInterval(function() {
+          baseTopic.publish({
+            linear: {
+              x: 0.3, // Set positive or negative meters/s to drive
+              y: 0,
+              z: 0
+            },
+            angular: {
+              x: 0,
+              y: 0,
+              z: 0 // Set rads/s to turn
+            }
+          });
+        }, 10); // Run this function every 10ms, or approximately 100 times per second.
+      }
+      _startBackward(evt) {
+        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
+        this.status = 'Driving backward...';
+        var baseTopic = this.$.baseTopic; // Get <ros-topic>
+        if (this.baseCommand) {
+          // The timer should not be set at this point, but clear it just in case
+          clearInterval(this.baseCommand);
+        }
+        this.baseCommand = setInterval(function() {
+          baseTopic.publish({
+            linear: {
+              x: -0.3, // Set positive or negative meters/s to drive
+              y: 0,
+              z: 0
+            },
+            angular: {
+              x: 0,
+              y: 0,
+              z: 0 // Set rads/s to turn
+            }
+          });
+        }, 10); // Run this function every 10ms, or approximately 100 times per second.
+      }
+      _startLeft(evt) {
+        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
+        this.status = 'Driving left...';
+        var baseTopic = this.$.baseTopic; // Get <ros-topic>
+        if (this.baseCommand) {
+          // The timer should not be set at this point, but clear it just in case
+          clearInterval(this.baseCommand);
+        }
+        this.baseCommand = setInterval(function() {
+          baseTopic.publish({
+            linear: {
+              x: 0, // Set positive or negative meters/s to drive
+              y: 0,
+              z: 0
+            },
+            angular: {
+              x: 0,
+              y: 0,
+              z: 0.5 // Set rads/s to turn
+            }
+          });
+        }, 10); // Run this function every 10ms, or approximately 100 times per second.
+      }
+      _startRight(evt) {
+        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
+        this.status = 'Driving right...';
+        var baseTopic = this.$.baseTopic; // Get <ros-topic>
+        if (this.baseCommand) {
+          // The timer should not be set at this point, but clear it just in case
+          clearInterval(this.baseCommand);
+        }
+        this.baseCommand = setInterval(function() {
+          baseTopic.publish({
+            linear: {
+              x: 0, // Set positive or negative meters/s to drive
+              y: 0,
+              z: 0
+            },
+            angular: {
+              x: 0,
+              y: 0,
+              z: -0.5 // Set rads/s to turn
+            }
+          });
+        }, 10); // Run this function every 10ms, or approximately 100 times per second.
+      }
+
+      _endBaseCommand(evt) {
+        this.status = 'Stopped driving.';
+        clearInterval(this.baseCommand);
+      }
+
       _setTorso() {
         this.status = 'Setting torso to ' + this.desiredTorsoHeight + ' meters...';
         this.$.torsoService.call({height: this.desiredTorsoHeight});
