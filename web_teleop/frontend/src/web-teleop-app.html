@@ -1,32 +1,96 @@
+<!-- IMPORTS
+     Here is where you import the elements used in this file, similar to imports in other programming languages.
+-->
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/ros-websocket/ros-websocket.html">
+<link rel="import" href="../bower_components/ros-topic/ros-topic.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-slider/paper-slider.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+...
 
 <dom-module id="web-teleop-app">
   <template>
+    <style is="custom-style" include="iron-flex"></style>
     <style>
+      <!-- CSS STYLE RULES
+           CSS style rules you add here only affect the HTML defined in this file.
+           If you are interested in more advanced techniques like sharing styles across elements, ask the course staff.
+      -->
       :host {
         display: block;
       }
+      paper-slider {
+        --paper-slider-input: {
+          width: 100px;
+        }
+      }
+      paper-button {
+        background-color: #eee;
+      }
     </style>
-    <h2>Hello [[prop1]]!</h2>
-  </template>
+    <!-- HTML TEMPLATE
+         Here is where you add the HTML for your element.
+         There is special syntax for binding JavaScript variables in your template.
+    -->
+    <ros-websocket auto ros="{{ros}}"
+      url="{{url}}"
+      on-connection="_handleConnection"
+      on-close="_handleClose"
+      on-error="_handleError">
+    </ros-websocket>
 
+    <ros-topic auto
+      ros="{{ros}}"
+      topic="joint_state_republisher/torso_lift_joint"
+      msg-type="std_msgs/Float64"
+      last-message="{{torsoHeight}}"
+      on-message="_handleTorsoHeight">
+    </ros-topic>
+
+    <h1>Fetch teleop</h1>
+    [[status]]
+    <div>
+      Torso height: [[_round(torsoHeight.data, 0.001)]] meters
+    </div>
+    <div class="layout horizontal center">
+      <paper-slider min="0" max="0.4" step="0.01" editable
+        value="{{desiredTorsoHeight}}"></paper-slider>
+      <paper-button>Set torso</paper-button>
+    </div>
+  </template>
   <script>
-    /**
-     * @customElement
-     * @polymer
-     */
+    /*
+      JAVASCRIPT SECTION
+      Here is where you add the code that controls the behavior of the element.
+    */
+
     class WebTeleopApp extends Polymer.Element {
       static get is() { return 'web-teleop-app'; }
+      // List properties here, which we will not use in this lab.
       static get properties() {
-        return {
-          prop1: {
-            type: String,
-            value: 'web-teleop-app'
-          }
-        };
+        return {};
+      }
+      _round(val, precision) {
+        return Math.round(val/precision) * precision;
+      }
+      _handleTorsoHeight(evt) {
+        var msg = evt.detail;
+        console.log(msg);
+      }
+      _handleConnection() {
+        this.status = 'Connected to the websocket server.';
+        console.log(this.status);
+      }
+      _handleClose() {
+        this.status = 'Closed connection to the websocket server.';
+        console.log(this.status);
+      }
+      _handleError() {
+        this.status = 'Error connecting to the websocket server.';
+        console.log(this.status);
       }
     }
-
     window.customElements.define(WebTeleopApp.is, WebTeleopApp);
   </script>
 </dom-module>
