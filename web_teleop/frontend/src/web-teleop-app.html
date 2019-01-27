@@ -1,6 +1,3 @@
-<!-- IMPORTS
-     Here is where you import the elements used in this file, similar to imports in other programming languages.
--->
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/ros-websocket/ros-websocket.html">
 <link rel="import" href="../bower_components/ros-topic/ros-topic.html">
@@ -8,16 +5,12 @@
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-slider/paper-slider.html">
 <link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
-...
 
 <dom-module id="web-teleop-app">
   <template>
+
     <style is="custom-style" include="iron-flex"></style>
     <style>
-      <!-- CSS STYLE RULES
-           CSS style rules you add here only affect the HTML defined in this file.
-           If you are interested in more advanced techniques like sharing styles across elements, ask the course staff.
-      -->
       :host {
         display: block;
       }
@@ -34,60 +27,57 @@
         display: inline-block;
       }
       #camera img {
-        width: 100%
-        height: auto;
+        width: 100%;
+          height: auto;
       }
     </style>
-    <!-- HTML TEMPLATE
-         Here is where you add the HTML for your element.
-         There is special syntax for binding JavaScript variables in your template.
-    -->
-    <ros-websocket auto ros="{{ros}}"
+
+    <ros-websocket auto id="ros" ros="{{ros}}"
       url="{{url}}"
       on-connection="_handleConnection"
       on-close="_handleClose"
-      on-error="_handleError">
-    </ros-websocket>
+      on-error="_handleError"
+    ></ros-websocket>
 
     <ros-topic auto
       ros="{{ros}}"
       topic="joint_state_republisher/torso_lift_joint"
       msg-type="std_msgs/Float64"
       last-message="{{torsoHeight}}"
-      on-message="_handleTorsoHeight">
-    </ros-topic>
+      on-message="_handleTorsoHeight"
+    ></ros-topic>
 
     <ros-topic
       id="baseTopic"
       ros="{{ros}}"
       topic="cmd_vel"
-      msg-type="geometry_msgs/Twist">
-    </ros-topic>
+      msg-type="geometry_msgs/Twist"
+    ></ros-topic>
 
-    <ros-service
-      id="torsoService"
-      on-response="_handleTorsoSuccess"
-      on-fail="_handleTorsoError"
-      name="/web_teleop/set_torso"
-      ros="{{ros}}"
-      service-type="web_teleop/SetTorso">
-    </ros-service>
+
+		<ros-service
+		  id="torsoService"
+		  on-response="_handleTorsoSuccess"
+		  on-fail="_handleTorsoError"
+		  name="/web_teleop/set_torso"
+		  ros="{{ros}}"
+		  service-type="web_teleop/SetTorso"
+		></ros-service>
+
 
     <h1>Fetch teleop</h1>
-    [[status]]
+    {{status}}
     <div id="camera">
       <img src="//[[hostname]]:8000/stream?topic=/head_camera/rgb/image_raw"></img>
     </div>
     <div>
       Torso height: [[_round(torsoHeight.data, 0.001)]] meters
     </div>
-
     <div class="layout horizontal center">
       <paper-slider min="0" max="0.4" step="0.01" editable
         value="{{desiredTorsoHeight}}"></paper-slider>
-      <paper-button on-tap="_setTorso">Set torso</paper-button>
+      <paper-button on-click="_setTorso">Set torso</paper-button>
     </div>
-
     <div id="driving" class="layout vertical">
       <div class="layout horizontal">
         <div class="flex"></div>
@@ -95,143 +85,27 @@
         <div class="flex"></div>
       </div>
       <div class="layout horizontal">
-        <paper-button on-down="_startLeft" on-up="_endBaseCommand">Left</paper-button>
-        <paper-button on-down="_startBackward" on-up="_endBaseCommand">Back</paper-button>
-        <paper-button on-down="_startRight" on-up="_endBaseCommand">Right</paper-button>
+        <paper-button on-down="_startLeft" on-up="_endBaseCommand" >Left</paper-button>
+        <paper-button on-down="_startBackward" on-up="_endBaseCommand">Backward</paper-button>
+        <paper-button on-down="_startRight" on-up="_endBaseCommand" >Right</paper-button>
       </div>
     </div>
-
   </template>
+
+
   <script>
-    /*
-      JAVASCRIPT SECTION
-      Here is where you add the code that controls the behavior of the element.
-    */
     class WebTeleopApp extends Polymer.Element {
       static get is() { return 'web-teleop-app'; }
-      // List properties here, which we will not use in this lab.
       static get properties() {
-        return {};
+        return {
+        };
       }
+
       ready() {
         super.ready();
         this.hostname = window.location.hostname;
       }
-      _startForward(evt) {
-        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
-        this.status = 'Driving forward...';
-        var baseTopic = this.$.baseTopic; // Get <ros-topic>
-        if (this.baseCommand) {
-          // The timer should not be set at this point, but clear it just in case
-          clearInterval(this.baseCommand);
-        }
-        this.baseCommand = setInterval(function() {
-          baseTopic.publish({
-            linear: {
-              x: 0.3, // Set positive or negative meters/s to drive
-              y: 0,
-              z: 0
-            },
-            angular: {
-              x: 0,
-              y: 0,
-              z: 0 // Set rads/s to turn
-            }
-          });
-        }, 10); // Run this function every 10ms, or approximately 100 times per second.
-      }
-      _startBackward(evt) {
-        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
-        this.status = 'Driving backward...';
-        var baseTopic = this.$.baseTopic; // Get <ros-topic>
-        if (this.baseCommand) {
-          // The timer should not be set at this point, but clear it just in case
-          clearInterval(this.baseCommand);
-        }
-        this.baseCommand = setInterval(function() {
-          baseTopic.publish({
-            linear: {
-              x: -0.3, // Set positive or negative meters/s to drive
-              y: 0,
-              z: 0
-            },
-            angular: {
-              x: 0,
-              y: 0,
-              z: 0 // Set rads/s to turn
-            }
-          });
-        }, 10); // Run this function every 10ms, or approximately 100 times per second.
-      }
-      _startLeft(evt) {
-        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
-        this.status = 'Driving left...';
-        var baseTopic = this.$.baseTopic; // Get <ros-topic>
-        if (this.baseCommand) {
-          // The timer should not be set at this point, but clear it just in case
-          clearInterval(this.baseCommand);
-        }
-        this.baseCommand = setInterval(function() {
-          baseTopic.publish({
-            linear: {
-              x: 0, // Set positive or negative meters/s to drive
-              y: 0,
-              z: 0
-            },
-            angular: {
-              x: 0,
-              y: 0,
-              z: 0.5 // Set rads/s to turn
-            }
-          });
-        }, 10); // Run this function every 10ms, or approximately 100 times per second.
-      }
-      _startRight(evt) {
-        evt.preventDefault(); // Prevent right-click menu from showing up after long press on mobile
-        this.status = 'Driving right...';
-        var baseTopic = this.$.baseTopic; // Get <ros-topic>
-        if (this.baseCommand) {
-          // The timer should not be set at this point, but clear it just in case
-          clearInterval(this.baseCommand);
-        }
-        this.baseCommand = setInterval(function() {
-          baseTopic.publish({
-            linear: {
-              x: 0, // Set positive or negative meters/s to drive
-              y: 0,
-              z: 0
-            },
-            angular: {
-              x: 0,
-              y: 0,
-              z: -0.5 // Set rads/s to turn
-            }
-          });
-        }, 10); // Run this function every 10ms, or approximately 100 times per second.
-      }
 
-      _endBaseCommand(evt) {
-        this.status = 'Stopped driving.';
-        clearInterval(this.baseCommand);
-      }
-
-      _setTorso() {
-        this.status = 'Setting torso to ' + this.desiredTorsoHeight + ' meters...';
-        this.$.torsoService.call({height: this.desiredTorsoHeight});
-      }
-      _handleTorsoSuccess() {
-        this.status = 'Set torso to ' + this.desiredTorsoHeight + ' meters.';
-      }
-      _handleTorsoError(evt) {
-        this.status = 'Error: ' + evt.detail;
-      }
-      _round(val, precision) {
-        return Math.round(val/precision) * precision;
-      }
-      _handleTorsoHeight(evt) {
-        var msg = evt.detail;
-        console.log(msg);
-      }
       _handleConnection() {
         this.status = 'Connected to the websocket server.';
         console.log(this.status);
@@ -244,7 +118,78 @@
         this.status = 'Error connecting to the websocket server.';
         console.log(this.status);
       }
+
+      _handleTorsoHeight(evt) {
+        var msg = evt.detail;
+        //console.log(msg);
+      }
+
+      // Rounds val to a given precision, where the precision is given as the
+      // step size between numbers in the output range.
+      // E.g., _round(0.053, 0.1) = 0.1
+      // E.g., _round(0.053, 0.01) = 0.05
+      // E.g., _round(0.053, 0.001) = 0.053
+      _round(val, precision) {
+        return Math.round(val/precision) * precision;
+      }
+
+      _setTorso() {
+        this.status = 'Setting torso to ' + this.desiredTorsoHeight + ' meters...';
+        this.$.torsoService.call({height: this.desiredTorsoHeight});
+      }
+			_handleTorsoSuccess() {
+        this.status = 'Set torso to ' + this.desiredTorsoHeight + ' meters.';
+      }
+			_handleTorsoError(evt) {
+        this.status = 'Error: ' + evt.detail;
+      }
+
+      _move(linear, angular) {
+        var baseTopic = this.$.baseTopic;
+        if (this.baseCommand) {
+          clearInterval(this.baseCommand);
+        }
+        this.baseCommand = setInterval(function() {
+          baseTopic.publish({
+            linear: {
+              x: linear,
+              y: 0,
+              z: 0
+            },
+            angular: {
+              x: 0,
+              y: 0,
+              z: angular
+            }
+          });
+        }, 10);
+      }
+      _startForward(evt) {
+        evt.preventDefault();
+        this.status = 'Driving forward...';
+        this._move(0.1, 0);
+      }
+      _startBackward(evt) {
+        evt.preventDefault();
+        this.status = 'Driving backward...';
+        this._move(-0.1, 0);
+      }
+      _startLeft(evt) {
+        evt.preventDefault();
+        this.status = 'Driving left...';
+        this._move(0, 0.5);
+      }
+      _startRight(evt) {
+        evt.preventDefault();
+        this.status = 'Driving right...';
+        this._move(0, -0.5);
+      }
+      _endBaseCommand(evt) {
+        this.status = 'Stopped driving.';
+        clearInterval(this.baseCommand);
+      }
     }
+
     window.customElements.define(WebTeleopApp.is, WebTeleopApp);
   </script>
 </dom-module>
