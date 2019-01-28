@@ -70,7 +70,6 @@
       msg-type="geometry_msgs/Twist"
     ></ros-topic>
 
-
 		<ros-service
 		  id="torsoService"
 		  on-response="_handleTorsoSuccess"
@@ -87,6 +86,24 @@
 		  name="/web_teleop/set_head"
 		  ros="{{ros}}"
 		  service-type="web_teleop/SetHead"
+		></ros-service>
+
+    <ros-service
+      id="armService"
+      on-response="_handleArmSuccess"
+      on-fail="_handleArmError"
+      name="/web_teleop/set_arm"
+      ros="{{ros}}"
+      service-type="web_teleop/SetArm"
+    ></ros-service>
+
+    <ros-service
+		  id="gripService"
+		  on-response="_handleGripSuccess"
+		  on-fail="_handleGripError"
+		  name="/web_teleop/set_grip"
+		  ros="{{ros}}"
+		  service-type="web_teleop/SetGrip"
 		></ros-service>
 
 
@@ -127,9 +144,23 @@
       <div class="layout horizontal">
         <paper-button on-down="_startLeft" on-up="_endBaseCommand" >Left</paper-button>
         <paper-button on-down="_startBackward" on-up="_endBaseCommand">Backward</paper-button>
-        <paper-button on-down="_startRight" on-up="_endBaseCommand" >Right</paper-button>
+        <paper-button on-down="_startRight" on-up="_endBaseCommand" >Right</paper-button> <br>
       </div>
     </div>
+
+    <div id="arm_straight" class="layout vertical">
+      <div class="layout horizontal">
+        <paper-button on-click="_armStraight">Straighten Arm</paper-button><br>
+      </div>
+    </div>
+
+    <div id="gripper" class="layout vertical">
+      <div class="layout horizontal">
+        <paper-button on-click="_gripClose">Grip close</paper-button>
+        <paper-button on-click="_gripOpen">Grip open</paper-button>
+      </div>
+    </div>
+
   </template>
 
 
@@ -200,7 +231,7 @@
       }
 			_handleHeadSuccess() {
         this.status = 'Set head pan to ' + this.desiredHeadPan;
-          this.status = 'Set head tilt to ' + this.desiredHeadTilt;
+        this.status = 'Set head tilt to ' + this.desiredHeadTilt;
       }
 			_handleHeadError(evt) {
         this.status = 'Error: ' + evt.detail;
@@ -249,6 +280,32 @@
       _endBaseCommand(evt) {
         this.status = 'Stopped driving.';
         clearInterval(this.baseCommand);
+      }
+
+      _armStraight() {
+        this.status = 'Straightening arm...';
+        this.$.armService.call({});
+      }
+      _handleArmSuccess() {
+        this.status = 'Arm success';
+      }
+      _handleArmError(evt) {
+        this.status = 'Error: ' + evt.detail;
+      }
+
+      _gripOpen() {
+        this.status = 'Opening grip...';
+        this.$.gripService.call({open: true});
+      }
+      _gripClose() {
+        this.status = 'Closing grip...';
+        this.$.gripService.call({open: false});
+      }
+			_handleGripSuccess() {
+        this.status = 'Grip success';
+      }
+			_handleGripError(evt) {
+        this.status = 'Error: ' + evt.detail;
       }
     }
 
