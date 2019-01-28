@@ -31,16 +31,18 @@ class ActuatorServer(object):
         self._head.pan_tilt(request.pan, request.tilt)
         return SetHeadResponse()
 
+    def handle_set_arm(self, request):
+        j1, j2, j3 = request.joint1, request.joint2, request.joint3
+        j4, j5, j6, j7 = request.joint4, request.joint5, request.joint6, request.joint7
+        self._arm.move_to_joints(robot_api.ArmJoints.from_list([j1, j2, j3, j4, j5, j6, j7]))
+        return SetArmResponse()
+
     def handle_set_grip(self, request):
         if request.open:
             self._grip.open()
         else:
             self._grip.close()
         return SetGripResponse()
-
-    def handle_set_arm(self, request):
-        self._arm.move_to_joints(robot_api.ArmJoints.from_list([0, 0, 0, 0, 0, 0, 0]))
-        return SetArmResponse()
 
 
 def main():

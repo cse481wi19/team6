@@ -141,19 +141,36 @@
         <paper-button on-down="_startForward" on-up="_endBaseCommand">Forward</paper-button>
         <div class="flex"></div>
       </div>
+      <br> <br>
       <div class="layout horizontal">
         <paper-button on-down="_startLeft" on-up="_endBaseCommand" >Left</paper-button>
         <paper-button on-down="_startBackward" on-up="_endBaseCommand">Backward</paper-button>
-        <paper-button on-down="_startRight" on-up="_endBaseCommand" >Right</paper-button> <br>
+        <paper-button on-down="_startRight" on-up="_endBaseCommand" >Right</paper-button>
       </div>
     </div>
-
+    <br> <br>
     <div id="arm_straight" class="layout vertical">
       <div class="layout horizontal">
-        <paper-button on-click="_armStraight">Straighten Arm</paper-button><br>
+        <paper-slider min="-2" max="2" step="0.1" editable
+          value="{{desiredJoint1}}"></paper-slider>
+        <paper-slider min="-2" max="2" step="0.1" editable
+          value="{{desiredJoint2}}"></paper-slider>
+        <paper-slider min="-2" max="2" step="0.1" editable
+          value="{{desiredJoint3}}"></paper-slider>
+      </div>
+      <div class="layout horizontal">
+        <paper-slider min="-2" max="2" step="0.1" editable
+          value="{{desiredJoint4}}"></paper-slider>
+        <paper-slider min="-2" max="2" step="0.1" editable
+          value="{{desiredJoint5}}"></paper-slider>
+        <paper-slider min="-2" max="2" step="0.1" editable
+          value="{{desiredJoint6}}"></paper-slider>
+        <paper-slider min="-2" max="2" step="0.1" editable
+          value="{{desiredJoint7}}"></paper-slider> <br>
+        <paper-button on-click="_setArm">Set Arm</paper-button>
       </div>
     </div>
-
+    <br> <br>
     <div id="gripper" class="layout vertical">
       <div class="layout horizontal">
         <paper-button on-click="_gripClose">Grip close</paper-button>
@@ -260,31 +277,39 @@
       _startForward(evt) {
         evt.preventDefault();
         this.status = 'Driving forward...';
-        this._move(0.1, 0);
+        this._move(0.2, 0);
       }
       _startBackward(evt) {
         evt.preventDefault();
         this.status = 'Driving backward...';
-        this._move(-0.1, 0);
+        this._move(-0.2, 0);
       }
       _startLeft(evt) {
         evt.preventDefault();
         this.status = 'Driving left...';
-        this._move(0, 0.5);
+        this._move(0, 0.2);
       }
       _startRight(evt) {
         evt.preventDefault();
         this.status = 'Driving right...';
-        this._move(0, -0.5);
+        this._move(0, -0.2);
       }
       _endBaseCommand(evt) {
         this.status = 'Stopped driving.';
         clearInterval(this.baseCommand);
       }
 
-      _armStraight() {
-        this.status = 'Straightening arm...';
-        this.$.armService.call({});
+      _setArm() {
+        this.status = 'Setting arm...';
+        this.$.armService.call({
+          joint1: this.desiredJoint1,
+          joint2: this.desiredJoint2,
+          joint3: this.desiredJoint3,
+          joint4: this.desiredJoint4,
+          joint5: this.desiredJoint5,
+          joint6: this.desiredJoint6,
+          joint7: this.desiredJoint7
+        });
       }
       _handleArmSuccess() {
         this.status = 'Arm success';
