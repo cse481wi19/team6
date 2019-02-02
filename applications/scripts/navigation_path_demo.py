@@ -11,23 +11,24 @@ class NavPath(object):
     def __init__(self):
         self.pub = rospy.Publisher('path_marker', Marker, queue_size=5)
         self.id = 0
-        self.marker = None
+        self.path = []
+        self.point = None
 
     def callback(self, msg):
-        self.marker = Marker(
-                    type=Marker.SPHERE,
-                    id=self.id,
-                    action=Marker.ADD,
-                    lifetime=rospy.Duration(0),
-                    scale=Vector3(0.1, 0.1, 0.1),
-                    ns='path_points',
-                    pose=msg.pose.pose,
-                    header=Header(frame_id='odom'),
-                    color=ColorRGBA(0.0, 1.0, 1.0, 0.8))
+        self.point = msg.pose.pose.position
 
     def update(self):
-        self.id+=1
-        self.pub.publish(self.marker)
+        self.path.append(self.point)
+        marker = Marker(
+                    type=Marker.LINE_STRIP,
+                    id=self.id,
+                    lifetime=rospy.Duration(0),
+                    scale=Vector3(0.06, 0.06, 0.06),
+                    ns='path_points',
+                    points=self.path,
+                    header=Header(frame_id='odom'),
+                    color=ColorRGBA(0.0, 1.0, 1.0, 0.8))
+        self.pub.publish(marker)
 
 def main():
     rospy.init_node('nav_node')
