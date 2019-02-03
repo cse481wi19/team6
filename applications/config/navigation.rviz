@@ -77,7 +77,7 @@ Visualization Manager:
       Max Color: 255; 255; 255
       Max Intensity: 999999
       Min Color: 0; 0; 0
-      Min Intensity: 999999
+      Min Intensity: 1.7115e-10
       Name: LaserScan
       Position Transformer: XYZ
       Queue Size: 10
@@ -378,10 +378,10 @@ Visualization Manager:
         Z: 1.34191
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.809796
+      Pitch: 0.814796
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.00458288
+      Yaw: 0.00958288
     Saved: ~
 Window Geometry:
   Displays:
