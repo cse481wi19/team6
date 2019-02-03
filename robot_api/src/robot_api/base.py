@@ -56,7 +56,7 @@ class Base(object):
         rate = rospy.Rate(10)
         # TODO: CONDITION should check if the robot has traveled the desired distance
         # TODO: Be sure to handle the case where the distance is negative!
-        while math.fabs(self.get_distance(start) - math.fabs(distance)) > 0.1:
+        while math.fabs(self.get_distance(start) - math.fabs(distance)) > speed:
             # TODO: you will probably need to do some math in this loop to check the CONDITION
             direction = -1 if distance < 0 else 1
             self.move(direction * speed, 0)
@@ -87,7 +87,7 @@ class Base(object):
         x = m[0, 0] # The x value of the x-axis (first column)
         y = m[1, 0] # The y value of the x-axis
         start_rads = math.atan2(y, x)
-        print('start_rads: ', str(start_rads))
+        # print('start_rads: ', str(start_rads))
         # TODO: What will you do if angular_distance is greater than 2*pi or less than -2*pi?
         if angular_distance < -2*math.pi or angular_distance > 2*math.pi:
             sign = angular_distance / math.fabs(angular_distance)
@@ -97,13 +97,12 @@ class Base(object):
         # target_rads must be in [-pi, pi]
         target_rads = (start_rads + math.pi + angular_distance) % (2*math.pi) - math.pi
 
-        print('angular_distance: ', str(angular_distance))
-        print('target_rads: ', str(target_rads))
-
+        # print('angular_distance: ', str(angular_distance))
+        # print('target_rads: ', str(target_rads))
         rate = rospy.Rate(10)
         # TODO: CONDITION should check if the robot has rotated the desired amount
         # TODO: Be sure to handle the case where the desired amount is negative!
-        while math.fabs(self.get_cur_rad() - target_rads) > 0.05:
+        while math.fabs(self.get_cur_rad() - target_rads) > speed / 5.0:
             # TODO: you will probably need to do some math in this loop to check the CONDITION
             direction = -1 if angular_distance < 0 else 1
             self.move(0, direction * speed)
