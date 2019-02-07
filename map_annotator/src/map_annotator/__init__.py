@@ -1,1 +1,1 @@
-from .map_annotator import MapAnnotator
+from .map_annotator_node import MapAnnotator

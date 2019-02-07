@@ -1,12 +1,15 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-<link rel="import" href="../bower_components/ros-topic/ros-topic.html">
-<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/ros-topic/ros-topic.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
 
 <dom-module id="map-annotator-pose">
   <template>
     <style>
       :host {
         display: block;
+      }
+      paper-button {
+        background-color: #eee;
       }
     </style>
 
@@ -17,7 +20,7 @@
       ros="{{ros}}"
       msg-type="map_annotator/UserAction">
     </ros-topic>
-   
+
     [[poseName]]
 
     <paper-button on-tap="_handleDelete">Delete</paper-button>
@@ -48,7 +51,7 @@
         var msg = {
           command: 'goto',
           name: this.poseName
-        };     
+        };
         this.$.userActions.publish(msg);
       }
 
