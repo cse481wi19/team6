@@ -108,8 +108,7 @@ class Arm(object):
         goal_builder.set_pose_goal(pose_stamped)
         goal = goal_builder.build()
 
-        self.move_group_client.send_goal(goal)
-        self.move_group_client.wait_for_result()
+        self.move_group_client.send_goal_and_wait(goal, rospy.Duration(10))
         result = self.move_group_client.get_result()
         return moveit_error_string(result.error_code.val)
 

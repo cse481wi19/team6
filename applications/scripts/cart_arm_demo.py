@@ -10,7 +10,6 @@ def wait_for_time():
     while rospy.Time().now().to_sec() == 0:
         pass
 
-
 def main():
     rospy.init_node('cart_arm_demo')
     wait_for_time()
@@ -27,20 +26,24 @@ def main():
     gripper_poses = [ps1, ps2]
 
     # set torso to mat height
-    # torso = robot_api.Torso()
-    # torso.set_height(robot_api.Torso.MAX_HEIGHT)
+    torso = robot_api.Torso()
+    torso.set_height(robot_api.Torso.MAX_HEIGHT)
 
     arm = robot_api.Arm()
+
     # register shutdown method
     def shutdown():
         arm.cancel_all_goals()
     rospy.on_shutdown(shutdown)
 
-    # for vals in DISCO_POSES:
-    #     arm.move_to_joints(robot_api.ArmJoints.from_list(vals))
-    error = arm.move_to_pose(pose)
-    if error is not None:
-        rospy.logerr(error)
+    # repeatedly moves the gripper between two poses:
+    while True:
+        for pose in gripper_poses:
+            error = arm.move_to_pose(pose)
+            if error is not None:
+                rospy.logerr(error)
+            # give the arm some time to settle down
+            rospy.sleep(1)
 
 
 if __name__ == '__main__':
