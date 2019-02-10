@@ -25,7 +25,7 @@ def main():
     ps2.pose = pose2
     gripper_poses = [ps1, ps2]
 
-    # set torso to mat height
+    # set torso to max height
     torso = robot_api.Torso()
     torso.set_height(robot_api.Torso.MAX_HEIGHT)
 
