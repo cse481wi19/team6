@@ -246,9 +246,9 @@ class AutoPickTeleop(object):
         obj_marker.scale.x = 0.06
         obj_marker.scale.y = 0.06
         obj_marker.scale.z = 0.06
-        obj_marker.color.r = 9
-        obj_marker.color.g = 97
-        obj_marker.color.b = 239
+        obj_marker.color.r = 0.09
+        obj_marker.color.g = 0.97
+        obj_marker.color.b = 2.39
         obj_marker.color.a = 1.0
 
         obj_control = InteractiveMarkerControl()
@@ -274,26 +274,109 @@ class AutoPickTeleop(object):
 
         self.update_gripper()
 
+    def check_ik(self, im, pose_stamped):
+        joints = self._arm.compute_ik(pose_stamped)
+        if joints == False:
+            color_gripper(im, 1, 0, 0, 1)
+        else:
+            color_gripper(im, 0, 1, 0, 1)
+        self._im_server.insert(im)
+
+    def compute_absolute_pose(self, obj_ps, goal_tf):
+        obj_tf = pose_to_transform(obj_ps.pose) # word^T_obj
+        result_tf = np.dot(obj_tf, goal_tf) # word^T_obj * obj^T_goal
+        result = PoseStamped()
+        result.header = obj_ps.header
+        result.pose = transform_to_pose(result_tf)
+        return result
+
     def update_gripper(self):
         obj_im = self._im_server.get('object')
         obj_ps = PoseStamped()
         obj_ps.header = obj_im.header
         obj_ps.pose = obj_im.pose
 
+        # define the transformation matrices (relative poses in the object frame!)
+        pregrasp_in_obj = np.array([
+            [1, 0, 0, -0.3],
+            [0, 1, 0,    0],
+            [0, 0, 1,    0],
+            [0, 0, 0,    1],
+        ])
 
-        pregrasp_ps = copy.deepcopy(obj_ps)
-        pregrasp_ps.pose.x = obj_ps.pose.x - 0.3
+        grasp_in_obj = copy.deepcopy(pregrasp_in_obj)
+        grasp_in_obj[0, 3] += 0.1 # x_obj += 0.15
 
-        grasp_ps = copy.deepcopy(pregrasp_ps)
-        grasp_ps.pose.x = pregrasp_ps.pose.x + 0.15
+        lift_in_obj = copy.deepcopy(grasp_in_obj)
+        lift_in_obj[2, 3] += 0.3 # z_obj += 0.3
 
-        lift_ps = copy.deepcopy(grasp_ps)
-        lift_ps.pose.x = grasp_ps.pose.z + 0.3
+        pregrasp_ps = self.compute_absolute_pose(obj_ps, pregrasp_in_obj)
+        grasp_ps = self.compute_absolute_pose(obj_ps, grasp_in_obj)
+        lift_ps = self.compute_absolute_pose(obj_ps, lift_in_obj)
 
+        # create & update the interactive_markers
+        pregrasp_im = interactive_gripper_marker(pregrasp_ps, 0.1)
+        pregrasp_im.name = 'pregrasp'
+        self.check_ik(pregrasp_im, pregrasp_ps)
+
+        grasp_im = interactive_gripper_marker(grasp_ps, 0.1)
+        grasp_im.name = 'grasp'
+        self.check_ik(grasp_im, grasp_ps)
+
+        lift_im = interactive_gripper_marker(lift_ps, 0.1)
+        lift_im.name = 'lift'
+        self.check_ik(lift_im, lift_ps)
+
+        # apply all changes together!
+        self._im_server.applyChanges()
 
     def handle_feedback(self, feedback):
-        pass
+        if feedback.marker_name != 'object':
+            return
+        obj_im = self._im_server.get('object')
+        obj_ps = PoseStamped()
+        obj_ps.header = obj_im.header
+        obj_ps.pose = obj_im.pose
 
+        if feedback.event_type == InteractiveMarkerFeedback.MENU_SELECT:
+            if feedback.menu_entry_id == 1: # pick from front
+                pregrasp_im = self._im_server.get('pregrasp')
+                pregrasp_ps = PoseStamped()
+                pregrasp_ps.header = pregrasp_im.header
+                pregrasp_ps.pose = pregrasp_im.pose
+
+                grasp_im = self._im_server.get('grasp')
+                grasp_ps = PoseStamped()
+                grasp_ps.header = grasp_im.header
+                grasp_ps.pose = grasp_im.pose
+
+                lift_im = self._im_server.get('lift')
+                lift_ps = PoseStamped()
+                lift_ps.header = lift_im.header
+                lift_ps.pose = lift_im.pose
+                # move to pregrasp pose
+                error = self._arm.move_to_pose(pregrasp_ps)
+                if error is not None:
+                    rospy.logerr(error)
+                    return
+                # move to grasp pose
+                error = self._arm.move_to_pose(grasp_ps)
+                if error is not None:
+                    rospy.logerr(error)
+                    return
+                # grasp
+                self._gripper.close()
+                # move to lift pose
+                error = self._arm.move_to_pose(lift_ps)
+                if error is not None:
+                    rospy.logerr(error)
+                    return
+            elif feedback.menu_entry_id == 2: # open gripper
+                self._gripper.open()
+        elif feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
+            self.update_gripper()
+
+###
 def main():
     rospy.init_node('gripper_teleop_node')
 
