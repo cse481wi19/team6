@@ -13,7 +13,7 @@ def wait_for_time():
         pass
 
 def main():
-    rospy.init_node('cart_arm_demo')
+    rospy.init_node('arm_obstacle_demo')
     wait_for_time()
     # argv = rospy.myargv()
 
