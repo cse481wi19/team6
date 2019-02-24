@@ -22,7 +22,14 @@ def main():
         return
     path = argv[1]
     camera = perception.MockCamera()
-    cloud = camera.read_cloud(path)
+
+    is_sim = True
+    if argv[2]:
+        is_sim = False
+    if is_sim:
+        cloud = camera.read_cloud(path)
+    else:
+        cloud = rospy.wait_for_message('head_camera/depth_registered/points', PointCloud2)
 
     if cloud is None:
         rospy.logerr('Could not load point cloud from {}'.format(path))
