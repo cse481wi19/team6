@@ -9,7 +9,9 @@ import numpy as np
 import rospy
 import sys
 import tf.transformations as tft
-
+import actionlib
+import robot_controllers_msgs
+from robot_controllers_msgs.msg import ControllerState, QueryControllerStatesGoal
 def transform_to_pose(matrix):
     pose = Pose()
     pose.position.x = matrix[0, 3]
@@ -68,14 +70,17 @@ def main():
     print('Welcome to the gripper program!\n')
     print_usage()
     rospy.sleep(0.5)
-    
+
     goal = QueryControllerStatesGoal()
     state = ControllerState()
     state.name = 'arm_controller/follow_joint_trajectory'
     state.state = ControllerState.STOPPED
     goal.updates.append(state)
-    self._controller_client.send_goal(goal)
-    self._controller_client.wait_for_result()
+    control_client = actionlib.SimpleActionClient("/query_controller_states", robot_controllers_msgs.msg.QueryControllerStatesAction)
+    # TODO: Wait for server
+    control_client.wait_for_server()
+    control_client.send_goal(goal)
+    control_client.wait_for_result()
 
     program = gripper_program.GripperProgram()
     gripper = robot_api.Gripper()

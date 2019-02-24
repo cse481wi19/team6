@@ -8,7 +8,10 @@ import tf
 import numpy as np
 import rospy
 import sys
+import actionlib
+import robot_controllers_msgs
 import tf.transformations as tft
+from robot_controllers_msgs.msg import ControllerState, QueryControllerStatesGoal
 
 def transform_to_pose(matrix):
     pose = Pose()
@@ -65,8 +68,12 @@ def main():
     state.name = 'arm_controller/follow_joint_trajectory'
     state.state = ControllerState.RUNNING
     goal.updates.append(state)
-    self._controller_client.send_goal(goal)
-    self._controller_client.wait_for_result()
+
+    control_client = actionlib.SimpleActionClient("/query_controller_states", robot_controllers_msgs.msg.QueryControllerStatesAction)
+    # TODO: Wait for server
+    control_client.wait_for_server()
+    control_client.send_goal(goal)
+    control_client.wait_for_result()
 
     torso = robot_api.Torso()
     torso.set_height(robot_api.Torso.MAX_HEIGHT)
@@ -104,8 +111,8 @@ def main():
             goal_tf = pose_to_transform(pose_stamped.pose)
             result_tf = np.dot(marker_tf, goal_tf)
             pose_stamped.header.frame_id = 'base_link'
-            pose_stamped.pose = transform_to_pose(result_tf)
-            # pose_stamped.pose = reader.markers[id].pose.pose
+            # pose_stamped.pose = transform_to_pose(result_tf)
+            pose_stamped.pose = reader.markers[id].pose.pose
         print(pose_stamped)
         error = arm.move_to_pose(pose_stamped)
         if error is not None:
