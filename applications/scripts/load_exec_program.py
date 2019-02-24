@@ -89,7 +89,7 @@ def main():
 
     # rate = rospy.Rate(10)
     # rate.sleep()
-    rospy.sleep(1)
+    rospy.sleep(2)
     actions = program.load_program(name)
     if actions is None:
         exit(1)
@@ -102,8 +102,9 @@ def main():
 
         pose_stamped = action.pose_stamped
         id = pose_stamped.header.frame_id
+        # print(reader.markers)
         if id not in reader.markers and id != 'base_link':
-            print("Frame does not exits.")
+            print("Frame " + id + " does not exits.")
             exit(1)
         if id in reader.markers:
             marker_tf = pose_to_transform(reader.markers[id].pose.pose)
@@ -111,14 +112,14 @@ def main():
             goal_tf = pose_to_transform(pose_stamped.pose)
             result_tf = np.dot(marker_tf, goal_tf)
             pose_stamped.header.frame_id = 'base_link'
-            # pose_stamped.pose = transform_to_pose(result_tf)
-            pose_stamped.pose = reader.markers[id].pose.pose
-        print(pose_stamped)
+            pose_stamped.pose = transform_to_pose(result_tf)
+            # pose_stamped.pose = reader.markers[id].pose.pose
+        # print(pose_stamped)
         error = arm.move_to_pose(pose_stamped)
         if error is not None:
             rospy.logerr(error)
 
-    # rospy.spin()
+    rospy.spin()
 
 
 if __name__ == '__main__':
