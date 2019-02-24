@@ -23,7 +23,9 @@ int main(int argc, char** argv) {
 
   // segmentation
 
+  // point cloud publisher for the segmented plane
   ros::Publisher table_pub = nh.advertise<sensor_msgs::PointCloud2>("table_cloud", 1, true);
+  // marker publisher for the segmented plane
   ros::Publisher marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 1, true);
   perception::Segmenter segmenter(table_pub, marker_pub);
   ros::Subscriber sub = nh.subscribe("cloud_in", 1, &perception::Segmenter::Callback, &segmenter);

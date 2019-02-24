@@ -6,6 +6,7 @@
 #include "pcl/point_types.h"
 #include "pcl_conversions/pcl_conversions.h"
 #include "pcl/common/angles.h"
+#include "pcl/common/common.h"
 #include "pcl/sample_consensus/method_types.h"
 #include "pcl/sample_consensus/model_types.h"
 #include "pcl/segmentation/sac_segmentation.h"
@@ -17,6 +18,7 @@
 
 #include "ros/ros.h"
 #include "sensor_msgs/PointCloud2.h"
+#include "visualization_msgs/Marker.h"
 
 
 namespace perception {
@@ -31,7 +33,17 @@ namespace perception {
 void GetAxisAlignedBoundingBox(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                                geometry_msgs::Pose* pose,
                                geometry_msgs::Vector3* dimensions) {
+   Eigen::Vector4f min_pt, max_pt;
+   pcl::getMinMax3D(*cloud, min_pt, max_pt);
 
+   pose->position.x = (max_pt.x() + min_pt.x()) / 2;
+   pose->position.y = (max_pt.y() + min_pt.y()) / 2;
+   pose->position.z = (max_pt.z() + min_pt.z()) / 2;
+   pose->orientation.w = 1; // the identity orientation
+
+   dimensions->x = max_pt.x() - min_pt.x();
+   dimensions->y = max_pt.y() - min_pt.y();
+   dimensions->z = max_pt.z() - min_pt.z();
 }
 
 void SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::Ptr indices) {
@@ -57,7 +69,20 @@ void SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::Ptr indices) {
   pcl::ModelCoefficients coeff;
   seg.segment(indices_internal, coeff);
 
-  *indices = indices_internal;
+  // *indices = indices_internal;
+
+  // Build custom indices that ignores points above the plane.
+  double distance_above_plane;
+  ros::param::param("distance_above_plane", distance_above_plane, 0.005);
+  
+  for (size_t i = 0; i < cloud->size(); ++i) {
+    const PointC& pt = cloud->points[i];
+    float val = coeff.values[0] * pt.x + coeff.values[1] * pt.y +
+                coeff.values[2] * pt.z + coeff.values[3];
+    if (val <= distance_above_plane) {
+      indices->indices.push_back(i);
+    }
+  }
 
   if (indices->indices.size() == 0) {
     ROS_ERROR("Unable to find surface.");
@@ -87,6 +112,16 @@ void Segmenter::Callback(const sensor_msgs::PointCloud2& msg) {
   sensor_msgs::PointCloud2 msg_out;
   pcl::toROSMsg(*table_cloud, msg_out);
   surface_points_pub_.publish(msg_out);
+
+  // publish marker for the plane
+  visualization_msgs::Marker table_marker;
+  table_marker.ns = "table";
+  table_marker.header.frame_id = "base_link";
+  table_marker.type = visualization_msgs::Marker::CUBE;
+  GetAxisAlignedBoundingBox(table_cloud, &table_marker.pose, &table_marker.scale);
+  table_marker.color.r = 1;
+  table_marker.color.a = 0.8;
+  marker_pub_.publish(table_marker);
 }
 
 }  // namespace perception
