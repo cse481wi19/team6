@@ -11,14 +11,14 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh;
 
   // cropped cloud
-  // ros::Publisher crop_pub = nh.advertise<sensor_msgs::PointCloud2>("cropped_cloud", 1, true);
-  // perception::Cropper cropper(crop_pub);
-  // ros::Subscriber crop_sub = nh.subscribe("cloud_in", 1, &perception::Cropper::Callback, &cropper);
+  ros::Publisher crop_pub = nh.advertise<sensor_msgs::PointCloud2>("cropped_cloud", 1, true);
+  perception::Cropper cropper(crop_pub);
+  ros::Subscriber crop_sub = nh.subscribe("cloud_in", 1, &perception::Cropper::Callback, &cropper);
 
   // downsampled cloud
-  // ros::Publisher downsample_pub = nh.advertise<sensor_msgs::PointCloud2>("downsampled_cloud", 1, true);
-  // perception::Downsampler downsampler(downsample_pub);
-  // ros::Subscriber downsample_sub = nh.subscribe("cropped_cloud", 1, &perception::Downsampler::Callback, &downsampler);
+  ros::Publisher downsample_pub = nh.advertise<sensor_msgs::PointCloud2>("downsampled_cloud", 1, true);
+  perception::Downsampler downsampler(downsample_pub);
+  ros::Subscriber downsample_sub = nh.subscribe("cropped_cloud", 1, &perception::Downsampler::Callback, &downsampler);
 
 
   // segmentation
@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
   // marker publisher for the segmented plane
   ros::Publisher marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 1, true);
   perception::Segmenter segmenter(table_pub, marker_pub);
-  ros::Subscriber sub = nh.subscribe("cloud_in", 1, &perception::Segmenter::Callback, &segmenter);
+  ros::Subscriber sub = nh.subscribe("downsampled_cloud", 1, &perception::Segmenter::Callback, &segmenter);
 
   ros::spin();
   return 0;
