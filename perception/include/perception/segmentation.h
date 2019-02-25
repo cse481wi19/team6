@@ -10,6 +10,11 @@
 
 namespace perception {
 
+
+void SegmentSurfaceObjects(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                           pcl::PointIndices::Ptr surface_indices,
+                           std::vector<pcl::PointIndices>* object_indices);
+
 // Finds the largest horizontal surface in the given point cloud.
 // This is useful for adding a collision object to MoveIt.
 //

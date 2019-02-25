@@ -110,6 +110,7 @@ catkin_package(
   LIBRARIES
     perception_crop
     perception_downsample
+    perception_segmentation
 #  CATKIN_DEPENDS roscpp rospy
 #  DEPENDS system_lib
 )
