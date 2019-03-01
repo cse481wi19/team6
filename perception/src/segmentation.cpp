@@ -1,4 +1,5 @@
 #include "perception/segmentation.h"
+#include "perception/box_fitter.h"
 #include "perception/typedefs.h"
 
 #include "pcl/PointIndices.h"
@@ -12,6 +13,7 @@
 #include "pcl/segmentation/sac_segmentation.h"
 #include "pcl/segmentation/extract_clusters.h"
 #include "pcl/filters/extract_indices.h"
+#include "shape_msgs/SolidPrimitive.h"
 
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/Vector3.h"
@@ -90,7 +92,7 @@ void GetAxisAlignedBoundingBox(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
   dimensions->z = max_pt.z() - min_pt.z();
 }
 
-void SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::Ptr indices) {
+void SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::Ptr indices, pcl::ModelCoefficients::Ptr coeff) {
   pcl::PointIndices indices_internal;
   pcl::SACSegmentation<PointC> seg;
 
@@ -110,8 +112,7 @@ void SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::Ptr indices) {
 
   // coeff contains the coefficients of the plane:
   // ax + by + cz + d = 0
-  pcl::ModelCoefficients coeff;
-  seg.segment(indices_internal, coeff);
+  seg.segment(indices_internal, *coeff);
 
   // *indices = indices_internal;
 
@@ -121,8 +122,8 @@ void SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::Ptr indices) {
 
   for (size_t i = 0; i < cloud->size(); ++i) {
     const PointC& pt = cloud->points[i];
-    float val = coeff.values[0] * pt.x + coeff.values[1] * pt.y +
-                coeff.values[2] * pt.z + coeff.values[3];
+    float val = coeff->values[0] * pt.x + coeff->values[1] * pt.y +
+                coeff->values[2] * pt.z + coeff->values[3];
     if (val <= distance_above_plane) {
       indices->indices.push_back(i);
     }
@@ -142,7 +143,8 @@ void Segmenter::Callback(const sensor_msgs::PointCloud2& msg) {
   pcl::fromROSMsg(msg, *cloud);
 
   pcl::PointIndices::Ptr table_inliers(new pcl::PointIndices());
-  SegmentSurface(cloud, table_inliers);
+  pcl::ModelCoefficients::Ptr coeff(new pcl::ModelCoefficients());
+  SegmentSurface(cloud, table_inliers, coeff);
 
   PointCloudC::Ptr table_cloud(new PointCloudC);
 
@@ -158,14 +160,14 @@ void Segmenter::Callback(const sensor_msgs::PointCloud2& msg) {
   // surface_points_pub_.publish(msg_out);
 
   // publish marker for the plane
-  visualization_msgs::Marker table_marker;
-  table_marker.ns = "table";
-  table_marker.header.frame_id = "base_link";
-  table_marker.type = visualization_msgs::Marker::CUBE;
-  GetAxisAlignedBoundingBox(table_cloud, &table_marker.pose, &table_marker.scale);
-  table_marker.color.r = 1;
-  table_marker.color.a = 0.8;
-  marker_pub_.publish(table_marker);
+  // visualization_msgs::Marker table_marker;
+  // table_marker.ns = "table";
+  // table_marker.header.frame_id = "base_link";
+  // table_marker.type = visualization_msgs::Marker::CUBE;
+  // GetAxisAlignedBoundingBox(table_cloud, &table_marker.pose, &table_marker.scale);
+  // table_marker.color.r = 1;
+  // table_marker.color.a = 0.8;
+  // marker_pub_.publish(table_marker);
 
   // publish the above_surface cloud
   PointCloudC::Ptr above_surface_cloud(new PointCloudC);
@@ -195,8 +197,19 @@ void Segmenter::Callback(const sensor_msgs::PointCloud2& msg) {
     object_marker.id = i;
     object_marker.header.frame_id = "base_link";
     object_marker.type = visualization_msgs::Marker::CUBE;
-    GetAxisAlignedBoundingBox(object_cloud, &object_marker.pose,
-                              &object_marker.scale);
+
+    PointCloudC::Ptr extract_out(new PointCloudC());
+    shape_msgs::SolidPrimitive shape;
+    geometry_msgs::Pose obj_pose;
+    FitBox(*object_cloud, coeff, *extract_out, shape, obj_pose);
+    // GetAxisAlignedBoundingBox(object_cloud, &object_marker.pose, &object_marker.scale);
+
+    object_marker.pose = obj_pose;
+
+    object_marker.scale.x = shape.dimensions[0];
+    object_marker.scale.y = shape.dimensions[1];
+    object_marker.scale.z = shape.dimensions[2];
+
     object_marker.color.g = 1;
     object_marker.color.a = 1;
     marker_pub_.publish(object_marker);
