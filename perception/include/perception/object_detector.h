@@ -12,27 +12,28 @@
 namespace perception {
 
 class ObjectDetector {
- public:
-  ObjectDetector(const ros::Publisher& marker_pub);
+  
+  public:
+    ObjectDetector(const ros::Publisher& marker_pub);
 
-  void Callback(const sensor_msgs::PointCloud2& msg);
+    void Callback(const sensor_msgs::PointCloud2& msg);
 
-  void cropCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cropped_cloud);
+    void cropCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cropped_cloud);
 
-  void downsampleCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                                      pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampled_cloud);
+    void downsampleCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                                        pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampled_cloud);
 
-  void SegmentSurface(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                      pcl::PointIndices::Ptr indices,
-                      pcl::ModelCoefficients::Ptr coeff);
+    void SegmentSurface(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                        pcl::PointIndices::Ptr indices,
+                        pcl::ModelCoefficients::Ptr coeff);
 
-  void SegmentSurfaceObjects(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                             pcl::PointIndices::Ptr surface_indices,
-                             std::vector<pcl::PointIndices>* object_indices);
+    void SegmentSurfaceObjects(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                               pcl::PointIndices::Ptr surface_indices,
+                               std::vector<pcl::PointIndices>* object_indices);
 
- private:
-  ros::Publisher marker_pub_;
+  private:
+    ros::Publisher marker_pub_;
 };
 
 }  // namespace perception
