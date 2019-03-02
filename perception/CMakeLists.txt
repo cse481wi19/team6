@@ -111,6 +111,7 @@ catkin_python_setup()
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES
+    perception_object_detector
     perception_crop
     perception_downsample
     perception_segmentation
@@ -161,12 +162,29 @@ target_link_libraries(perception_point_cloud_demo
   ${catkin_LIBRARIES}
 )
 
+add_executable(perception_floor_object_detection src/floor_object_detection.cpp)
+set_target_properties(perception_floor_object_detection PROPERTIES OUTPUT_NAME floor_object_detection PREFIX "")
+add_dependencies(perception_floor_object_detection ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(perception_floor_object_detection
+  perception_segmentation
+  perception_crop
+  perception_downsample
+  ${catkin_LIBRARIES}
+)
+
 # declare libraries
 add_library(perception_box_fitter src/box_fitter.cpp)
 add_dependencies(perception_box_fitter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(perception_box_fitter
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
+)
+
+add_library(perception_object_detector src/object_detector.cpp)
+add_dependencies(perception_object_detector ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(perception_object_detector
+  perception_box_fitter
+  ${catkin_LIBRARIES}
 )
 
 add_library(perception_segmentation src/segmentation.cpp)

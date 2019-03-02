@@ -170,12 +170,12 @@ void Segmenter::Callback(const sensor_msgs::PointCloud2& msg) {
   // marker_pub_.publish(table_marker);
 
   // publish the above_surface cloud
-  PointCloudC::Ptr above_surface_cloud(new PointCloudC);
-  extract.setNegative(true); // get the object clouds!
-  extract.filter(*above_surface_cloud);
-  sensor_msgs::PointCloud2 msg_out;
-  pcl::toROSMsg(*above_surface_cloud, msg_out);
-  surface_points_pub_.publish(msg_out);
+  // PointCloudC::Ptr above_surface_cloud(new PointCloudC);
+  // extract.setNegative(true); // get the object clouds!
+  // extract.filter(*above_surface_cloud);
+  // sensor_msgs::PointCloud2 msg_out;
+  // pcl::toROSMsg(*above_surface_cloud, msg_out);
+  // surface_points_pub_.publish(msg_out);
 
   // get objects cloud indices
   std::vector<pcl::PointIndices> object_indices;
@@ -203,6 +203,21 @@ void Segmenter::Callback(const sensor_msgs::PointCloud2& msg) {
     geometry_msgs::Pose obj_pose;
     FitBox(*object_cloud, coeff, *extract_out, shape, obj_pose);
     // GetAxisAlignedBoundingBox(object_cloud, &object_marker.pose, &object_marker.scale);
+
+    // publish an arrow indicating object orientation
+    visualization_msgs::Marker orient_marker;
+    orient_marker.ns = "orientations";
+    orient_marker.id = i;
+    orient_marker.header.frame_id = "base_link";
+    orient_marker.type = visualization_msgs::Marker::ARROW;
+    orient_marker.pose = obj_pose;
+
+    orient_marker.scale.x = 0.2;
+    orient_marker.scale.y = 0.01;
+    orient_marker.scale.z = 0.01;
+    orient_marker.color.r = 1;
+    orient_marker.color.a = 1;
+    marker_pub_.publish(orient_marker);
 
     object_marker.pose = obj_pose;
 

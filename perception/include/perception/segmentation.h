@@ -24,7 +24,7 @@ void SegmentSurfaceObjects(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
 //  indices: The indices of points in the point cloud that correspond to the
 //    surface. Empty if no surface was found.
 void SegmentSurface(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                    pcl::PointIndices::Ptr indices, 
+                    pcl::PointIndices::Ptr indices,
                     pcl::ModelCoefficients::Ptr coeff);
 
 // Computes the axis-aligned bounding box of a point cloud.
