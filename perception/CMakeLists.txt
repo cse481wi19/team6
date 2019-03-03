@@ -162,13 +162,11 @@ target_link_libraries(perception_point_cloud_demo
   ${catkin_LIBRARIES}
 )
 
-add_executable(perception_floor_object_detection src/floor_object_detection.cpp)
-set_target_properties(perception_floor_object_detection PROPERTIES OUTPUT_NAME floor_object_detection PREFIX "")
-add_dependencies(perception_floor_object_detection ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(perception_floor_object_detection
-  perception_segmentation
-  perception_crop
-  perception_downsample
+add_executable(perception_object_detection src/object_detection.cpp)
+set_target_properties(perception_object_detection PROPERTIES OUTPUT_NAME object_detection PREFIX "")
+add_dependencies(perception_object_detection ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(perception_object_detection
+  perception_object_detector
   ${catkin_LIBRARIES}
 )
 

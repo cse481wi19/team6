@@ -46,12 +46,12 @@ void ObjectDetector::cropCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                pcl::PointCloud<pcl::PointXYZRGB>::Ptr cropped_cloud) {
 
   double min_x, min_y, min_z, max_x, max_y, max_z;
-  ros::param::param("crop_min_x", min_x, 0.0);
-  ros::param::param("crop_min_y", min_y, -1.0);
-  ros::param::param("crop_min_z", min_z, 0.5);
+  ros::param::param("crop_min_x", min_x, 0.5);
   ros::param::param("crop_max_x", max_x, 1.5);
-  ros::param::param("crop_max_y", max_y, 1.0);
-  ros::param::param("crop_max_z", max_z, 1.5);
+  ros::param::param("crop_min_y", min_y, -0.7);
+  ros::param::param("crop_max_y", max_y, 0.7);
+  ros::param::param("crop_min_z", min_z, 0.0);
+  ros::param::param("crop_max_z", max_z, 0.5);
   Eigen::Vector4f min_pt(min_x, min_y, min_z, 1);
   Eigen::Vector4f max_pt(max_x, max_y, max_z, 1);
 
@@ -80,9 +80,9 @@ void ObjectDetector::SegmentSurfaceObjects(pcl::PointCloud<pcl::PointXYZRGB>::Pt
   // do euclidean clustering
   double cluster_tolerance;
   int min_cluster_size, max_cluster_size;
-  ros::param::param("ec_cluster_tolerance", cluster_tolerance, 0.05);
+  ros::param::param("ec_cluster_tolerance", cluster_tolerance, 0.02);
   ros::param::param("ec_min_cluster_size", min_cluster_size, 40);
-  ros::param::param("ec_max_cluster_size", max_cluster_size, 10000);
+  ros::param::param("ec_max_cluster_size", max_cluster_size, 1500);
 
   pcl::EuclideanClusterExtraction<PointC> euclid;
   euclid.setInputCloud(cloud);
@@ -131,7 +131,7 @@ void ObjectDetector::SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::P
 
   // Build custom indices that ignores points above the plane.
   double distance_above_plane;
-  ros::param::param("distance_above_plane", distance_above_plane, 0.01);
+  ros::param::param("distance_above_plane", distance_above_plane, 0.02);
 
   for (size_t i = 0; i < cloud->size(); ++i) {
     const PointC& pt = cloud->points[i];
@@ -148,6 +148,14 @@ void ObjectDetector::SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::P
   }
 }
 
+bool ObjectDetector::checkShape(shape_msgs::SolidPrimitive shape) {
+  double object_max_dim;
+  ros::param::param("object_max_dim", object_max_dim, 0.5);
+  return shape.dimensions[0] < object_max_dim &&
+         shape.dimensions[1] < object_max_dim &&
+         shape.dimensions[2] < object_max_dim;
+}
+
 void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
   PointCloudC::Ptr cloud(new PointCloudC());
   pcl::fromROSMsg(msg, *cloud);
@@ -156,21 +164,20 @@ void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
   PointCloudC::Ptr cropped_cloud(new PointCloudC());
   PointCloudC::Ptr downsampled_cloud(new PointCloudC());
 
-  pcl::PointIndices::Ptr table_inliers(new pcl::PointIndices());
+  cropCloud(cloud, cropped_cloud);
+  downsampleCloud(cropped_cloud, downsampled_cloud);
+
+  pcl::PointIndices::Ptr surface_inliers(new pcl::PointIndices());
   pcl::ModelCoefficients::Ptr coeff(new pcl::ModelCoefficients());
-  SegmentSurface(cloud, table_inliers, coeff);
-
-  PointCloudC::Ptr table_cloud(new PointCloudC);
-
-  // Extract subset of cloud into subset_cloud:
-  pcl::ExtractIndices<PointC> extract;
-  extract.setInputCloud(cloud);
-  extract.setIndices(table_inliers);
-  extract.filter(*table_cloud);
+  SegmentSurface(downsampled_cloud, surface_inliers, coeff);
 
   // get objects cloud indices
   std::vector<pcl::PointIndices> object_indices;
-  SegmentSurfaceObjects(cloud, table_inliers, &object_indices);
+  SegmentSurfaceObjects(downsampled_cloud, surface_inliers, &object_indices);
+
+  // extract object points from downsampled_cloud
+  pcl::ExtractIndices<PointC> extract;
+  extract.setInputCloud(downsampled_cloud);
 
   // visualize each object!
   for (size_t i = 0; i < object_indices.size(); ++i) {
@@ -182,18 +189,22 @@ void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
     extract.setNegative(false);
     extract.filter(*object_cloud);
 
+    // try to fit a bounding box to the object
+    PointCloudC::Ptr extract_out(new PointCloudC());
+    shape_msgs::SolidPrimitive shape;
+    geometry_msgs::Pose obj_pose;
+    FitBox(*object_cloud, coeff, *extract_out, shape, obj_pose);
+
+    // filter objects with dimensions that are too large to grasp
+    if (!checkShape(shape)) continue;
+
     // Publish a bounding box around it.
     visualization_msgs::Marker object_marker;
     object_marker.ns = "objects";
     object_marker.id = i;
     object_marker.header.frame_id = "base_link";
     object_marker.type = visualization_msgs::Marker::CUBE;
-
-    PointCloudC::Ptr extract_out(new PointCloudC());
-    shape_msgs::SolidPrimitive shape;
-    geometry_msgs::Pose obj_pose;
-    FitBox(*object_cloud, coeff, *extract_out, shape, obj_pose);
-
+    
     // publish an arrow indicating object orientation
     visualization_msgs::Marker orient_marker;
     orient_marker.ns = "orientations";

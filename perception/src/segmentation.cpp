@@ -118,7 +118,7 @@ void SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::Ptr indices, pcl:
 
   // Build custom indices that ignores points above the plane.
   double distance_above_plane;
-  ros::param::param("distance_above_plane", distance_above_plane, 0.01);
+  ros::param::param("distance_above_plane", distance_above_plane, 0.02);
 
   for (size_t i = 0; i < cloud->size(); ++i) {
     const PointC& pt = cloud->points[i];

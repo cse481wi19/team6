@@ -8,11 +8,12 @@
 
 #include "ros/ros.h"
 #include "sensor_msgs/PointCloud2.h"
+#include "shape_msgs/SolidPrimitive.h"
 
 namespace perception {
 
 class ObjectDetector {
-  
+
   public:
     ObjectDetector(const ros::Publisher& marker_pub);
 
@@ -31,6 +32,8 @@ class ObjectDetector {
     void SegmentSurfaceObjects(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                                pcl::PointIndices::Ptr surface_indices,
                                std::vector<pcl::PointIndices>* object_indices);
+
+    bool checkShape(shape_msgs::SolidPrimitive shape);
 
   private:
     ros::Publisher marker_pub_;
