@@ -156,6 +156,40 @@ bool ObjectDetector::checkShape(shape_msgs::SolidPrimitive shape) {
          shape.dimensions[2] < object_max_dim;
 }
 
+void ObjectDetector::visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geometry_msgs::Pose obj_pose, size_t id) {
+  // Publish a bounding box marker around the object
+  visualization_msgs::Marker object_marker;
+  object_marker.ns = "objects";
+  object_marker.id = id;
+  object_marker.header.frame_id = "base_link";
+  object_marker.type = visualization_msgs::Marker::CUBE;
+
+  // publish an arrow marker that shows object orientation
+  visualization_msgs::Marker orient_marker;
+  orient_marker.ns = "orientations";
+  orient_marker.id = id;
+  orient_marker.header.frame_id = "base_link";
+  orient_marker.type = visualization_msgs::Marker::ARROW;
+  orient_marker.pose = obj_pose;
+
+  orient_marker.scale.x = 0.2;
+  orient_marker.scale.y = 0.01;
+  orient_marker.scale.z = 0.01;
+  orient_marker.color.r = 1;
+  orient_marker.color.a = 1;
+  marker_pub_.publish(orient_marker);
+
+  object_marker.pose = obj_pose;
+
+  object_marker.scale.x = shape.dimensions[0];
+  object_marker.scale.y = shape.dimensions[1];
+  object_marker.scale.z = shape.dimensions[2];
+
+  object_marker.color.g = 1;
+  object_marker.color.a = 1;
+  marker_pub_.publish(object_marker);
+}
+
 void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
   PointCloudC::Ptr cloud(new PointCloudC());
   pcl::fromROSMsg(msg, *cloud);
@@ -198,37 +232,7 @@ void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
     // filter objects with dimensions that are too large to grasp
     if (!checkShape(shape)) continue;
 
-    // Publish a bounding box around it.
-    visualization_msgs::Marker object_marker;
-    object_marker.ns = "objects";
-    object_marker.id = i;
-    object_marker.header.frame_id = "base_link";
-    object_marker.type = visualization_msgs::Marker::CUBE;
-    
-    // publish an arrow indicating object orientation
-    visualization_msgs::Marker orient_marker;
-    orient_marker.ns = "orientations";
-    orient_marker.id = i;
-    orient_marker.header.frame_id = "base_link";
-    orient_marker.type = visualization_msgs::Marker::ARROW;
-    orient_marker.pose = obj_pose;
-
-    orient_marker.scale.x = 0.2;
-    orient_marker.scale.y = 0.01;
-    orient_marker.scale.z = 0.01;
-    orient_marker.color.r = 1;
-    orient_marker.color.a = 1;
-    marker_pub_.publish(orient_marker);
-
-    object_marker.pose = obj_pose;
-
-    object_marker.scale.x = shape.dimensions[0];
-    object_marker.scale.y = shape.dimensions[1];
-    object_marker.scale.z = shape.dimensions[2];
-
-    object_marker.color.g = 1;
-    object_marker.color.a = 1;
-    marker_pub_.publish(object_marker);
+    visualizeBoundingBox(shape, obj_pose, i);
   }
 }
 

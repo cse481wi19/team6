@@ -35,6 +35,8 @@ class ObjectDetector {
 
     bool checkShape(shape_msgs::SolidPrimitive shape);
 
+    void visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geometry_msgs::Pose obj_pose, size_t id);
+
   private:
     ros::Publisher marker_pub_;
 };
