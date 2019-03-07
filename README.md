@@ -12,8 +12,8 @@ Detected object 3D bounding boxes will be of type `visualization_msgs::Marker::C
 For more details, check out [ObjectDetector::visualizeBoundingBox](perception/src/object_detector.cpp#L159).
 
 #### - the [Object Detection Node](perception/src/object_detection.cpp):
-A Node that utilizes the Object Detector class.
-Take `/cloud_in` as the input point cloud topic and set Object Detector's output topic to the `/object_markers`.
+A constantly running Node that utilizes the Object Detector class.
+Takes `/cloud_in` as the input point cloud topic and sets Object Detector's output topic to the `/object_markers`.
 
 ### [Arm Motion Planning]:
 ...
