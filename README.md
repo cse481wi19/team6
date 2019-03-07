@@ -1,4 +1,20 @@
-# CSE 481C
-Starter code and samples for CSE 481C at the University of Washington, Winter 2019.
+# IF - Intelligent Fetcher (CSE 481C Winter 2019 Team 6)
 
-Labs and other documentation are on the **[wiki](https://github.com/cse481wi19/cse481wi19/wiki)**.
+## Components:
+
+### [Object Detection]:
+
+#### the [Object Detector](perception/src/object_detector.cpp):
+#### the [Object Detector](perception/src/object_detector.cpp):
+
+### [Arm Motion Planning]:
+...
+
+### [Mapping & Navigation]:
+...
+
+### [Facial Detection]:
+...
+
+### [Master Node]:
+...
