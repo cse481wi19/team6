@@ -1,4 +1,4 @@
-# IF - Intelligent Fetcher (CSE 481C Winter 2019 Team 6)
+# IF - Intelligent Fetcher
 
 ## Components:
 
