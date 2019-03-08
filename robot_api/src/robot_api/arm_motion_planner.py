@@ -56,8 +56,8 @@ def try_grasp_plan(obj_ps, obj_scale):
         [0, 0, 1,    0],
         [0, 0, 0,    1],
     ])
-    # if not self._arm.compute_ik(pregrasp_ps):
-    #     return
+    if not self._arm.compute_ik(pregrasp_ps):
+        return None
     return pregrasp_in_obj
 
 class ArmMotionPlanner(object):
@@ -75,10 +75,12 @@ class ArmMotionPlanner(object):
         # TODO: for each obstacle in list, add add_obstacle
         if obj_marker == None:
             rospy.logerr("Passed in None")
-            return
+            return 1
 
         obj_ps, obj_scale = extract_marker_info(obj_marker)
         pregrasp_in_obj = try_grasp_plan(obj_ps, obj_scale)
+        if pregrasp_in_obj is None:
+            return 1
         grasp_in_obj = copy.deepcopy(pregrasp_in_obj)
         grasp_in_obj[0, 3] += 0.1 # x_obj += 0.15
         lift_in_obj = copy.deepcopy(grasp_in_obj)
@@ -96,6 +98,9 @@ class ArmMotionPlanner(object):
         error = self._arm.move_to_pose(pregrasp_ps, **kwargs)
         if error is not None:
             rospy.logerr(error)
+            return 1
+
+        return 0
         # TODO: Need to find a suitable pre_grasp position
         # TODO: close gripper after grasph_ps
         # TODO: lift_ps should be visible
