@@ -6,8 +6,8 @@ from interactive_markers.interactive_marker_server import InteractiveMarkerServe
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, InteractiveMarkerFeedback
 from visualization_msgs.msg import Marker
 from map_annotator.msg import PoseNames, UserAction
-import tf
-import tf.transformations as tft
+# import tf
+# import tf.transformations as tft
 # from geometry_msgs.msg import Quaternion, Pose, Point, Vector3
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Pose
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction
@@ -40,9 +40,9 @@ class Navigator(object):
         self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.curr_pose = None
         self._amcl_sub = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, callback=self._amcl_callback)
-        self.tf_listener = tf.TransformListener()
-        self.transforms = {}
-        self.load_tf("base_link", 4)
+        # self.tf_listener = tf.TransformListener()
+        # self.transforms = {}
+        # self.load_tf("base_link", 4)
 
 
     def _amcl_callback(self, msg):
@@ -58,17 +58,17 @@ class Navigator(object):
 
 
 
-    def load_tf(self, tgt_frame, timeout):
-        if tgt_frame not in self.transforms:
-            self.tf_listener.waitForTransform('map', tgt_frame, rospy.Time(), rospy.Duration(secs=4))
-        now = rospy.Time.now()
-        try:
-            self.tf_listener.waitForTransform('map', tgt_frame, now, rospy.Duration(secs=timeout))
-            tf_res = self.tf_listener.lookupTransform('map', tgt_frame, now)
-            self.transforms[tgt_frame] = tf_res
-            return True
-        except:
-            return False
+    # def load_tf(self, tgt_frame, timeout):
+    #     if tgt_frame not in self.transforms:
+    #         self.tf_listener.waitForTransform('map', tgt_frame, rospy.Time(), rospy.Duration(secs=4))
+    #     now = rospy.Time.now()
+    #     try:
+    #         self.tf_listener.waitForTransform('map', tgt_frame, now, rospy.Duration(secs=timeout))
+    #         tf_res = self.tf_listener.lookupTransform('map', tgt_frame, now)
+    #         self.transforms[tgt_frame] = tf_res
+    #         return True
+    #     except:
+    #         return False
 
 
     def goto(self, goal, timeout):
