@@ -33,13 +33,21 @@ Run `rosrun applications arm_motion_planner_demo.py`
 ### [Mapping & Navigation]:
 #### - the [Navigator](/src/map_annotator/src/map_annotator/navigation.py)
 API:
+
 class Navigator()
+
   current_pose(): get the current position of the robot in map frame.
+  
     return: current a PoseStamped of the current position with frame_id map.
+    
   goto(goal=PoseStamped, timeout=secs): goto a given target position in the given timeout time
+  
     params: a PoseStamped with a position and a header with a frame_id
+    
             a integer with the seconds of time we want to wait
+            
     return: True if it gets to the given goal in the given time
+    
             False otherwise
 
 #### Usage:
