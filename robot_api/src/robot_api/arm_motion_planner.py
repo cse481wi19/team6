@@ -63,7 +63,7 @@ def try_grasp_plan(obj_ps, obj_scale):
 class ArmMotionPlanner(object):
     def __init__(self, arm):
         self._arm = arm
-        print("here")
+        print("Initialized ArmMotionPlanner")
         # TODO: have a collision map?
         # self.planning_scene = PlanningSceneInterface(frame='base_link')
 
@@ -75,12 +75,12 @@ class ArmMotionPlanner(object):
         # TODO: for each obstacle in list, add add_obstacle
         if obj_marker == None:
             rospy.logerr("Passed in None")
-            return 1
+            return false
 
         obj_ps, obj_scale = extract_marker_info(obj_marker)
         pregrasp_in_obj = try_grasp_plan(obj_ps, obj_scale)
         if pregrasp_in_obj is None:
-            return 1
+            return false
         grasp_in_obj = copy.deepcopy(pregrasp_in_obj)
         grasp_in_obj[0, 3] += 0.1 # x_obj += 0.15
         lift_in_obj = copy.deepcopy(grasp_in_obj)
@@ -98,9 +98,9 @@ class ArmMotionPlanner(object):
         error = self._arm.move_to_pose(pregrasp_ps, **kwargs)
         if error is not None:
             rospy.logerr(error)
-            return 1
+            return false
 
-        return 0
+        return true
         # TODO: Need to find a suitable pre_grasp position
         # TODO: close gripper after grasph_ps
         # TODO: lift_ps should be visible

@@ -25,7 +25,7 @@ def wait_for_time():
 class MarkerReader(object):
     def __init__(self):
         self.obj_marker = None
-        print("mr init")
+        print("Initialized MarkerReader")
 
     def callback(self, msg):
         if msg.type == Marker.CUBE:
