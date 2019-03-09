@@ -15,6 +15,10 @@ For more details, check out [ObjectDetector::visualizeBoundingBox](perception/sr
 A constantly running Node that utilizes the Object Detector class.
 Takes `/cloud_in` as the input point cloud topic and sets Object Detector's output topic to the `/object_markers`.
 
+#### Usage:
+See Arm Motion Planning usage below.
+
+
 ### [Arm Motion Planning]:
 #### - the [Arm Motion Planner](robot_api/src/robot_api/arm_motion_planner.py)
 MainFunction: `pick_up(self, obj_marker, obs_marker_list=None):` 
@@ -62,7 +66,12 @@ If you want to test on simulator, run `roslaunch applications nav_rviz_smi.launc
 ...
 
 ### [Facial Detection]:
-...
+
+#### - the [Facial Detection Node](...):
+A constantly running Node that takes as input two image topics (rgb & depth) and one camera info topic and returns a `geometry_msgs::PoseStamped` (a 3D location, in the camera frame `head_camera_rgb_optical_frame`) of the closet detected face to `/face_locations`.
+
+#### Usage:
+`rosrun perception face_detection rgb:=/topic1 depth:=/topic2 cam_info:=/topic3`
 
 ### [Master Node]:
 ...
