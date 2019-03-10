@@ -22,6 +22,7 @@ See Arm Motion Planning usage below.
 ### [Arm Motion Planning]:
 #### - the [Arm Motion Planner](robot_api/src/robot_api/arm_motion_planner.py)
 Initialization: `arm_planner = ArmMotionPlanner(arm, gripper)`
+
 MainFunction: `pick_up(self, obj_marker, obs_marker_list=None):` 
 obj_marker is type `visualization_msgs::Marker` and obs_marker_list should be a list of `visualization_msgs::Marker`, but it default to None. The function would return False if the planning for grasp that object is failed, and return True on success.
 
