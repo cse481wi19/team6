@@ -17,7 +17,12 @@ find_package(catkin REQUIRED COMPONENTS
   shape_msgs
   simple_grasping
   tf
+  image_geometry
+  image_transport
+  cv_bridge
 )
+
+find_package( OpenCV REQUIRED )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -111,13 +116,15 @@ catkin_python_setup()
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES
+    perception_face_detector
     perception_object_detector
     perception_crop
     perception_downsample
     perception_segmentation
     perception_box_fitter
 #  CATKIN_DEPENDS roscpp rospy
-#  DEPENDS system_lib
+  DEPENDS
+    OpenCV
 )
 
 ###########
@@ -129,6 +136,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -170,12 +178,26 @@ target_link_libraries(perception_object_detection
   ${catkin_LIBRARIES}
 )
 
+add_executable(perception_face_detection src/face_detection.cpp)
+set_target_properties(perception_face_detection PROPERTIES OUTPUT_NAME face_detection PREFIX "")
+add_dependencies(perception_face_detection ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(perception_face_detection
+  perception_face_detector
+  ${catkin_LIBRARIES}
+)
+
 # declare libraries
+add_library(perception_face_detector src/face_detector.cpp)
+add_dependencies(perception_face_detector ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(perception_face_detector
+  ${catkin_LIBRARIES}
+  ${OpenCV_INCLUDE_DIRS}
+)
+
 add_library(perception_box_fitter src/box_fitter.cpp)
 add_dependencies(perception_box_fitter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(perception_box_fitter
   ${catkin_LIBRARIES}
-  ${PCL_LIBRARIES}
 )
 
 add_library(perception_object_detector src/object_detector.cpp)
