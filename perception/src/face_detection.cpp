@@ -21,7 +21,6 @@ using namespace message_filters;
 
 namespace perception {
 
-/// \brief A simple hepler class for demo.
 class Demor {
 	public:
 		FaceDetector faceDetector;
@@ -49,10 +48,7 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   }
 
   // run & time face detection
-  // std::vector<Frame> lst;
-
   float start_tick = clock();
-
   cv::Point3d point3d;
   faceDetector.detectFace(rgb_ptr->image, depth_ptr->image, &point3d);
   float end_tick = clock();
@@ -72,7 +68,6 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   face_marker.pose.position.y = point3d.y;
   face_marker.pose.position.z = point3d.z;
   face_marker.pose.orientation.w = 1; // the identity orientation;
-
 
   face_marker.scale.x = 0.1;
   face_marker.scale.y = 0.1;
