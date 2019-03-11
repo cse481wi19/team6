@@ -59,64 +59,27 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
 
   ROS_INFO("face detection runtime: %f", (end_tick - start_tick) / CLOCKS_PER_SEC);
 
-  // if (!result) {
-  //   ROS_INFO("no face detected...\n");
-  //   return;
-  // }
-
-  // run & time FrameToCloud()
-  // start_tick = clock();
-
-  // std::vector<PointCloudC::Ptr> object_clouds;
-  // PointCloudC::Ptr object_cloud;
-  //
-  // for (std::vector<Frame>::iterator it = lst.begin(); it != lst.end(); it++) {
-  //   object_cloud = PointCloudC::Ptr(new PointCloudC());
-  //
-  //   if (faceDetector.FrameToCloud(rgb_ptr->image, depth_ptr->image, *it, object_cloud)) {
-  //     object_clouds.push_back(object_cloud);
-  //   }
-  // }
-  // alternatively, you can call Match to directly return a vector of object_clouds as well:
-  // faceDetector.Match(rgb_ptr->image, depth_ptr->image, &object_clouds);
-  // end_tick = clock();
-
-  // ROS_INFO("%lu calls to FrameToCloud() total runtime: %f\n", lst.size(),  (end_tick - start_tick) / CLOCKS_PER_SEC);
-  //
-  // if (object_clouds.empty()) {
-  //   ROS_INFO("no valid matched object coordinate...\n");
-  //   return;
-  // }
-  //
-  // // annotates rgb_ptr->image & publish it
-  // ROS_INFO("#matched 2D objects: %lu\n", lst.size());
-  // ROS_INFO("-----------");
-  // for (int i = 0; i < lst.size(); i++) {
-  //   Frame& f = lst[i];
-  //   std::ostringstream stm;
-  //   stm << i;
-  //   rectangle( rgb_ptr->image, f.p1, f.p2, cv::Scalar(255, 255, 0), 4, 8, 0 );
-  //   putText(rgb_ptr->image, stm.str(), cv::Point(f.p1.x - 10, f.p1.y - 10),
-  //           cv::FONT_HERSHEY_COMPLEX_SMALL, 1.5, cv::Scalar(255, 255, 0), 2, CV_AA);
-  //   ROS_INFO("frame score: %f, p1 pos: [%d, %d], index: %d", f.score, f.p1.x, f.p1.y, i);
-  // }
-  // ROS_INFO("-----------\n");
-  //
   face2d_pub.publish(rgb_ptr->toImageMsg());
-  //
-  // // concatenate the vector of pointClouds into a single one & publish it
-  // PointCloudC::Ptr pcl_cloud(new PointCloudC());
-  // for (std::vector<PointCloudC::Ptr>::iterator it = object_clouds.begin(); it != object_clouds.end(); it++) {
-  //   *pcl_cloud += **it;
-  // }
-  // ROS_INFO("#matched 3D objects: %lu", object_clouds.size());
-  // ROS_INFO("pcl cloud size: %lu\n", pcl_cloud->size());
-  //
-  // sensor_msgs::PointCloud2 ros_cloud;
-  // pcl::toROSMsg(*pcl_cloud, ros_cloud);
-  // ros_cloud.header.frame_id = camera_info->header.frame_id; // head_camera_rgb_optical_frame
-  //
-  // cloud_pub.publish(ros_cloud);
+
+  // publish an cube marker whose position is the 3d point of the center of the largest/closest detected face
+  visualization_msgs::Marker face_marker;
+  face_marker.ns = "face";
+  face_marker.id = 0;
+  face_marker.header.frame_id = camera_info->header.frame_id;
+  face_marker.type = visualization_msgs::Marker::CUBE;
+
+  face_marker.pose.position.x = point3d.x;
+  face_marker.pose.position.y = point3d.y;
+  face_marker.pose.position.z = point3d.z;
+  face_marker.pose.orientation.w = 1; // the identity orientation;
+
+
+  face_marker.scale.x = 0.1;
+  face_marker.scale.y = 0.1;
+  face_marker.scale.z = 0.03;
+  face_marker.color.g = 1;
+  face_marker.color.a = 1;
+  marker_pub.publish(face_marker);
 }
 
 }
@@ -137,7 +100,7 @@ int main(int argc, char** argv) {
   demor.faceDetector.set_cam_model(demor.camera_info);
 
   // setup published topics
-  demor.marker_pub = nh.advertise<visualization_msgs::Marker>("face_marker", 1, true);
+  demor.marker_pub = nh.advertise<visualization_msgs::Marker>("PointXYZ", 1, true);
   demor.face2d_pub = nh.advertise<sensor_msgs::Image>("face_2d", 100);
 
   message_filters::Subscriber<Image> rgb_sub(nh, "/head_camera/rgb/image_raw", 1);
