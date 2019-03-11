@@ -14,11 +14,10 @@ class FaceDetector {
 
     void set_cam_model(const sensor_msgs::CameraInfoConstPtr& camera_info);
 
-    // void publish3DFaceCenterPoint(const cv::Mat& rgb, const cv::Mat& depth, const cv::Point p);
-    //
-    void detect2DAndDisplay(cv::Mat& rgb);
+    // perform 2d detection, return 3d face center points, and draw 2d bounding boxes on the input rgb
+    void detectFace(cv::Mat& rgb, cv::Mat& depth, cv::Point3d* point3d);
 
-    void drawFaces(cv::Mat& rgb, std::vector<cv::Rect> faces);
+    void drawFaces(cv::Mat& rgb, std::vector<cv::Rect> faces, cv::Point2d* p_center);
 
   private:
     image_geometry::PinholeCameraModel cam_model_;

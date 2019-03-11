@@ -2,6 +2,8 @@
 #include "perception/box_fitter.h"
 #include "perception/typedefs.h"
 
+#include "tf/transform_listener.h"
+
 #include "pcl/PointIndices.h"
 #include "pcl/point_cloud.h"
 #include "pcl/point_types.h"
@@ -15,6 +17,7 @@
 #include "pcl/segmentation/sac_segmentation.h"
 #include "pcl/segmentation/extract_clusters.h"
 #include "pcl/filters/extract_indices.h"
+#include "pcl_ros/transforms.h"
 #include "shape_msgs/SolidPrimitive.h"
 
 #include "geometry_msgs/Pose.h"
@@ -149,11 +152,16 @@ void ObjectDetector::SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::P
 }
 
 bool ObjectDetector::checkShape(shape_msgs::SolidPrimitive shape) {
-  double object_max_dim;
-  ros::param::param("object_max_dim", object_max_dim, 0.5);
+  double object_max_dim, object_max_grab_dim;
+  ros::param::param("object_max_dim", object_max_dim, 0.3);
+  ros::param::param("object_max_grab_dim", object_max_grab_dim, 0.1);
+
+  double min_xy_dim = (shape.dimensions[0] < shape.dimensions[1]) ? shape.dimensions[0] : shape.dimensions[1];
+
   return shape.dimensions[0] < object_max_dim &&
          shape.dimensions[1] < object_max_dim &&
-         shape.dimensions[2] < object_max_dim;
+         shape.dimensions[2] < object_max_dim &&
+         min_xy_dim < object_max_grab_dim;
 }
 
 void ObjectDetector::visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geometry_msgs::Pose obj_pose, size_t id) {
@@ -191,8 +199,27 @@ void ObjectDetector::visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geom
 }
 
 void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
+
+  // Transform the cloud msg into base_link
+  tf_listener.waitForTransform("base_link", msg.header.frame_id, ros::Time(0), ros::Duration(5.0));
+
+  tf::StampedTransform transform;
+  try {
+    tf_listener.lookupTransform("base_link", msg.header.frame_id, ros::Time(0), transform);
+  } catch (tf::LookupException& e) {
+    std::cerr << e.what() << std::endl;
+    return;
+  } catch (tf::ExtrapolationException& e) {
+    std::cerr << e.what() << std::endl;
+    return;
+  }
+
+  sensor_msgs::PointCloud2 msg_base;
+  pcl_ros::transformPointCloud("base_link", transform, msg, msg_base);
+
+  // convert ros cloud to pcl cloud
   PointCloudC::Ptr cloud(new PointCloudC());
-  pcl::fromROSMsg(msg, *cloud);
+  pcl::fromROSMsg(msg_base, *cloud);
   ROS_INFO("Got point cloud with %ld points", cloud->size());
 
   PointCloudC::Ptr cropped_cloud(new PointCloudC());

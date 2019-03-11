@@ -3,6 +3,8 @@
 #include "pcl/point_types.h"
 #include "pcl/ModelCoefficients.h"
 
+#include "tf/transform_listener.h"
+
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/Vector3.h"
 
@@ -39,6 +41,7 @@ class ObjectDetector {
 
   private:
     ros::Publisher marker_pub_;
+    tf::TransformListener tf_listener;
 };
 
 }  // namespace perception

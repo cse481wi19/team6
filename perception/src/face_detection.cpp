@@ -52,7 +52,9 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   // std::vector<Frame> lst;
 
   float start_tick = clock();
-  faceDetector.detect2DAndDisplay(rgb_ptr->image);
+
+  cv::Point3d point3d;
+  faceDetector.detectFace(rgb_ptr->image, depth_ptr->image, &point3d);
   float end_tick = clock();
 
   ROS_INFO("face detection runtime: %f", (end_tick - start_tick) / CLOCKS_PER_SEC);
@@ -123,14 +125,6 @@ int main(int argc, char** argv) {
 
   ros::init(argc, argv, "face_detection");
   ros::NodeHandle nh;
-
-  // Load feature files from stdin
-  // cv::Mat templ = cv::imread( argv[1], 1 );
-  //
-  // if ( !templ.data ) {
-  //     ROS_ERROR("No template data \n");
-  //     return -1;
-  // }
 
   perception::Demor demor;
 
