@@ -6,8 +6,8 @@ from interactive_markers.interactive_marker_server import InteractiveMarkerServe
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, InteractiveMarkerFeedback
 from visualization_msgs.msg import Marker
 from map_annotator.msg import PoseNames, UserAction
-# import tf
-# import tf.transformations as tft
+import tf
+import tf.transformations as tft
 # from geometry_msgs.msg import Quaternion, Pose, Point, Vector3
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Pose
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction
@@ -40,7 +40,7 @@ class Navigator(object):
         self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.curr_pose = None
         self._amcl_sub = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, callback=self._amcl_callback)
-        # self.tf_listener = tf.TransformListener()
+        self.tf_listener = tf.TransformListener()
         # self.transforms = {}
         # self.load_tf("base_link", 4)
 
@@ -57,11 +57,43 @@ class Navigator(object):
         return self.curr_pose
 
 
+    # transform from a PoseStamped to another PoseStamped with different frame_id
+    def transform(self, from_ps, to_frameid, timeout=4):
+        to_ps = PoseStamped()
+        to_ps.header.frame_id = to_frameid
+        obj_in_from = pose_to_transform(from_ps.pose)
+        trans, rot = self.load_tf(to_frameid, from_ps.header.frame_id, timeout)
+        if trans is None or rot is None:
+            print("failed to load tf")
+            return None
+        tf_pose = Pose()
+        tf_pose.position.x = trans[0]
+        tf_pose.position.y = trans[1]
+        tf_pose.position.z = trans[2]
+
+        tf_pose.orientation.x = rot[0]
+        tf_pose.orientation.y = rot[1]
+        tf_pose.orientation.z = rot[2]
+        tf_pose.orientation.w = rot[3]
+        from_in_to = pose_to_transform(tf_pose)
+        obj_in_to = np.dot(from_in_to, obj_in_from)
+        to_ps.pose = transform_to_pose(obj_in_to)
+        return to_ps
+
+
+    def load_tf(self, to_frame, from_frame, timeout=2):
+        try:
+            self.tf_listener.waitForTransform(to_frame, from_frame, rospy.Time(), rospy.Duration(secs=timeout))
+            now = rospy.Time.now()
+            self.tf_listener.waitForTransform(to_frame, from_frame, now, rospy.Duration(secs=timeout))
+            return self.tf_listener.lookupTransform(to_frame, from_frame, now)
+        except:
+            return (None, None)
 
     # def load_tf(self, tgt_frame, timeout):
     #     if tgt_frame not in self.transforms:
     #         self.tf_listener.waitForTransform('map', tgt_frame, rospy.Time(), rospy.Duration(secs=4))
-    #     now = rospy.Time.now()
+    #
     #     try:
     #         self.tf_listener.waitForTransform('map', tgt_frame, now, rospy.Duration(secs=timeout))
     #         tf_res = self.tf_listener.lookupTransform('map', tgt_frame, now)
