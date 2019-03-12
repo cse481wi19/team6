@@ -50,8 +50,12 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   // run & time face detection
   float start_tick = clock();
   cv::Point3d point3d;
+	// ROS_INFO("before: face 3d point: x=%f, y=%f, z=%f", point3d.x, point3d.y, point3d.z);
+
   faceDetector.detectFace(rgb_ptr->image, depth_ptr->image, &point3d);
   float end_tick = clock();
+
+	// ROS_INFO("after: face 3d point: x=%f, y=%f, z=%f", point3d.x, point3d.y, point3d.z);
 
   ROS_INFO("face detection runtime: %f", (end_tick - start_tick) / CLOCKS_PER_SEC);
 
@@ -95,7 +99,7 @@ int main(int argc, char** argv) {
   demor.faceDetector.set_cam_model(demor.camera_info);
 
   // setup published topics
-  demor.marker_pub = nh.advertise<visualization_msgs::Marker>("PointXYZ", 1, true);
+  demor.marker_pub = nh.advertise<visualization_msgs::Marker>("face_marker", 1, true);
   demor.face2d_pub = nh.advertise<sensor_msgs::Image>("face_2d", 100);
 
   message_filters::Subscriber<Image> rgb_sub(nh, "/head_camera/rgb/image_raw", 1);
