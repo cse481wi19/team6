@@ -16,7 +16,8 @@ A constantly running Node that utilizes the Object Detector class.
 Takes `/cloud_in` as the input point cloud topic and sets Object Detector's output topic to the `/object_markers`.
 
 #### Usage:
-See Arm Motion Planning usage below.
+1. For simulation usage, see Arm Motion Planning Usage below
+2. For usage on the real robot, do `rosrun perception object_detection /cloud_in:=/head_camera/depth_registered/points`
 
 
 ### [Arm Motion Planning]:
@@ -70,10 +71,10 @@ If you want to test on simulator, run `roslaunch applications nav_rviz_smi.launc
 ### [Facial Detection]:
 
 #### - the [Facial Detection Node](...):
-A constantly running Node that takes as input two image topics (rgb & depth) and one camera info topic and returns a `geometry_msgs::PoseStamped` (a 3D location, in the camera frame `head_camera_rgb_optical_frame`) of the closet detected face to `/face_locations`.
+A constantly running Node that utilizes two image topics (rgb & registered_depth) plus one camera_info topic. It outputs a `visualization_msgs::Marker` (in the camera frame, whose pose is the 3D location of the center of the closet detected face)  to `/face_marker`.
 
 #### Usage:
-`rosrun perception face_detection rgb:=/topic1 depth:=/topic2 cam_info:=/topic3`
+`rosrun perception face_detection`
 
 ### [Master Node]:
 ...
