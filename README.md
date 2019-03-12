@@ -16,7 +16,8 @@ A constantly running Node that utilizes the Object Detector class.
 Takes `/cloud_in` as the input point cloud topic and sets Object Detector's output topic to the `/object_markers`.
 
 #### Usage:
-See Arm Motion Planning usage below.
+1. For simulation usage, see Arm Motion Planning Usage below
+2. For usage on the real robot, do `rosrun perception object_detection /cloud_in:=/head_camera/depth_registered/points`
 
 
 ### [Arm Motion Planning]:
