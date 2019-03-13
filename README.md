@@ -58,13 +58,13 @@ class Navigator()
             False otherwise
 
 #### Usage:
-1. Run `roslaunch applications nav_rviz.launch` (See Note)
+1. Run `roslaunch applications/launch/nav_rviz.launch` (See Note)
 2. Create Navigator()
 3. Call current_pose() and goto(goal=PoseStamped, timeout=secs)
 
 #### Note:
 nav_rviz.launch will launch the map recorded in the real world.
-If you want to test on simulator, run `roslaunch applications nav_rviz_smi.launch` for 1.
+If you want to test on simulator, run `roslaunch applications/launch/nav_rviz_smi.launch` for 1.
 
 ...
 
