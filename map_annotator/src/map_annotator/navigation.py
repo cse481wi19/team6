@@ -41,8 +41,8 @@ class Navigator(object):
         self.curr_pose = None
         self._amcl_sub = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, callback=self._amcl_callback)
         self.tf_listener = tf.TransformListener()
-        # self.transforms = {}
-        # self.load_tf("base_link", 4)
+        self.transforms = {}
+        self.load_tf_in_map("base_link", 4)
 
 
     def _amcl_callback(self, msg):
@@ -90,51 +90,52 @@ class Navigator(object):
         except:
             return (None, None)
 
-    # def load_tf(self, tgt_frame, timeout):
-    #     if tgt_frame not in self.transforms:
-    #         self.tf_listener.waitForTransform('map', tgt_frame, rospy.Time(), rospy.Duration(secs=4))
-    #
-    #     try:
-    #         self.tf_listener.waitForTransform('map', tgt_frame, now, rospy.Duration(secs=timeout))
-    #         tf_res = self.tf_listener.lookupTransform('map', tgt_frame, now)
-    #         self.transforms[tgt_frame] = tf_res
-    #         return True
-    #     except:
-    #         return False
+    def load_tf_in_map(self, tgt_frame, timeout):
+        if tgt_frame not in self.transforms:
+            self.tf_listener.waitForTransform('map', tgt_frame, rospy.Time(), rospy.Duration(secs=4))
+
+        try:
+            self.tf_listener.waitForTransform('map', tgt_frame, now, rospy.Duration(secs=timeout))
+            tf_res = self.tf_listener.lookupTransform('map', tgt_frame, now)
+            self.transforms[tgt_frame] = tf_res
+            return True
+        except:
+            return False
 
 
     def goto(self, goal, timeout):
         # print(goal)
-        # tgt_frame = goal.header.frame_id
-        # if tgt_frame != 'map':
-        #     self.load_tf(tgt_frame, 0.5)
-        #     if tgt_frame not in self.transforms:
-        #         return False
+        tgt_frame = goal.header.frame_id
+        if tgt_frame != 'map':
+            self.load_tf_in_map(tgt_frame, 4)
+            if tgt_frame not in self.transforms:
+                return False
 
         move_base_goal = MoveBaseGoal()
-        # if tgt_frame == 'map':
-        move_base_goal.target_pose = goal
-        # else:
-        #     move_base_goal.target_pose.header.frame_id = 'map'
-        #     pose = Pose()
-        #     trans, rot = self.transforms[tgt_frame]
-        #     pose.position.x = trans[0]
-        #     pose.position.y = trans[1]
-        #     pose.position.z = trans[2]
-        #
-        #     pose.orientation.x = rot[0]
-        #     pose.orientation.y = rot[1]
-        #     pose.orientation.z = rot[2]
-        #     pose.orientation.w = rot[3]
-        #
-        #     tgt_frame_in_map = pose_to_transform(pose)
-        #     tgt_in_tgt_frame = pose_to_transform(goal.pose)
-        #     tgt_in_map = np.dot(tgt_frame_in_map, tgt_in_tgt_frame)
-        #     move_base_goal.target_pose.pose = transform_to_pose(tgt_in_map)
+        if tgt_frame == 'map':
+            move_base_goal.target_pose = goal
+        else:
+            move_base_goal.target_pose.header.frame_id = 'map'
+            pose = Pose()
+            trans, rot = self.transforms[tgt_frame]
+            pose.position.x = trans[0]
+            pose.position.y = trans[1]
+            pose.position.z = trans[2]
+
+            pose.orientation.x = rot[0]
+            pose.orientation.y = rot[1]
+            pose.orientation.z = rot[2]
+            pose.orientation.w = rot[3]
+
+            tgt_frame_in_map = pose_to_transform(pose)
+            tgt_in_tgt_frame = pose_to_transform(goal.pose)
+            tgt_in_map = np.dot(tgt_frame_in_map, tgt_in_tgt_frame)
+            move_base_goal.target_pose.pose = transform_to_pose(tgt_in_map)
         # print(move_base_goal.target_pose)
         self.move_base.send_goal(move_base_goal)
     	success = self.move_base.wait_for_result(rospy.Duration(timeout))
         state = self.move_base.get_state()
+        # print(state)
     	if not success or state != GoalStatus.SUCCEEDED:
             self.move_base.cancel_goal()
             rospy.loginfo("The base failed to move forward for some reason")
