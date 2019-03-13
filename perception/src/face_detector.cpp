@@ -78,13 +78,27 @@ void FaceDetector::detectFace(cv::Mat& rgb, cv::Mat& depth, cv::Point3d* point3d
   cv::Point2d p_center;
   drawFaces(rgb, faces4, &p_center);
 
-  float dist = depth.at<float>(p_center.x, p_center.y);
-  if (!isnan(dist)) {
-    cv::Point3d p_3d = cam_model_.projectPixelTo3dRay(p_center);
-    point3d->x = p_3d.x * dist;
-    point3d->y = p_3d.y * dist;
-    point3d->z = p_3d.z * dist;
+  // estimate face center dist
+  int bound = 2;
+
+  float e_dist = 0.0;
+  int count = 0;
+  // i -> row, j-> column
+  for (int i = p_center.y - bound; i <= p_center.y + bound; i++) {
+    for (int j = p_center.x - bound; j <= p_center.x + bound; j++) {
+      float dist = depth.at<float>(i, j);
+      if (!isnan(dist)) {
+        e_dist += dist;
+        count++;
+      }
+    }
   }
+  e_dist /= count;
+
+  cv::Point3d p_3d = cam_model_.projectPixelTo3dRay(p_center);
+  point3d->x = p_3d.x * e_dist;
+  point3d->y = p_3d.y * e_dist;
+  point3d->z = p_3d.z * e_dist;
 }
 
 }
