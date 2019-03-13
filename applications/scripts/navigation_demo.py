@@ -28,15 +28,18 @@ def main():
         if pose is not None:
             # pose.pose.orientation.w = -1
             goal = PoseStamped()
-            goal.header.frame_id = 'base_link'
+            goal.header.frame_id = 'map'
             goal.pose.position.x = 2
-            # pose.pose.position.y = 0
-            # pose.pose.position.z = 0
+            goal.pose.position.y = 3
+            goal.pose.position.z = 0
             # pose.pose.orientation.x = 0
             # pose.pose.orientation.y = 0
             # pose.pose.orientation.z = 0
-            goal.pose.orientation.w = 1
-            success = annotator.goto(goal, 5)
+            # goal.pose.orientation.w = 1
+            goal = navigator.transform(goal, "base_link")
+            if goal is not None:
+                success = navigator.goto(goal, 5)
+                print(success)
 
         rate.sleep()
 

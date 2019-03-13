@@ -13,7 +13,7 @@ import actionlib
 import robot_controllers_msgs
 from robot_controllers_msgs.msg import ControllerState, QueryControllerStatesGoal
 
-PREGRASP = 0.14
+PREGRASP = 0.24
 
 def pose_to_transform(pose):
     q = pose.orientation
@@ -83,10 +83,17 @@ class ArmMotionPlanner(object):
         # print(pregrasp_in_obj)
         pregrasp_ps = compute_absolute_pose(obj_ps, pregrasp_in_obj)
         grasp_in_obj = copy.deepcopy(pregrasp_in_obj)
-        grasp_in_obj[2, 3] -= 0.04
+        grasp_in_obj[2, 3] -= 0.14
+        print("pregrasp_in_obj")
+        print(pregrasp_in_obj)
+        print("grasp_in_obj")
+        print(grasp_in_obj)
         grasp_ps = compute_absolute_pose(obj_ps, grasp_in_obj)
-        # print(pregrasp_ps)
-        # print(grasp_ps)
+        grasp_ps.pose.position.z = max(grasp_ps.pose.position.z, 0.23)
+        print("pregrasp_ps")
+        print(pregrasp_ps)
+        print("grasp_ps")
+        print(grasp_ps)
         error = self._arm.check_pose(pregrasp_ps)
         if error is not None:
             print("pre_grasp failed")
@@ -143,7 +150,7 @@ class ArmMotionPlanner(object):
             print("grasp failed")
             self.remove_obstacles(obs_marker_list)
             return False
-
+        print(grasp_ps)
         error = self._arm.move_to_pose(grasp_ps, **kwargs)
         if error is not None:
             rospy.logerr(error)

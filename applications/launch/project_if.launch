@@ -1,0 +1,5 @@
+roslaunch fetch_moveit_config move_group.launch
+roslaunch applications/launch/nav_rviz.launch
+rosrun perception object_detection /cloud_in:=/head_camera/depth_registered/points
+rosrun perception face_detection
+rosrun applications project_demo.py

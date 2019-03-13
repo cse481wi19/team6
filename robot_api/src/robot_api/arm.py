@@ -219,3 +219,7 @@ class Arm(object):
         self.client.send_goal(goal)
         self.client.wait_for_result()
         return self.client.get_result()
+
+    def move_to_initial_pose(self):
+        joints_pose = ArmJoints.from_list([1.3, 1.4, -0.2, 1.7, 0.0, 1.7, 0.0])
+        self.move_to_joints(joints_pose)

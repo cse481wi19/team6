@@ -24,13 +24,13 @@ def wait_for_time():
 
 class MarkerReader(object):
     def __init__(self):
-        self.obj_markers = set()
+        self.obj_markers = {}
         print("Initialized MarkerReader")
         # self.obj_marker = None
 
     def callback(self, msg):
         if msg.type == Marker.CUBE and msg.pose.position.x < 0.6:
-            self.obj_markers.add(msg)
+            self.obj_markers[msg.id] = msg
             # self.obj_marker = msg
 
 def print_usage():
@@ -62,13 +62,13 @@ def main():
         # print(reader.obj_marker)
         obj_list = copy.deepcopy(reader.obj_markers)
         # obj_list = set(copy.deepcopy(obs_list))
-        for obj_marker in obj_list:
+        for obj_marker_id in obj_list:
             # for obs_marker in obs_list:
             #     print(obs_marker)
             # print()
             # print(obj_marker)
             # obs_list.remove(obj_marker)
-            arm_planner.pick_up(obj_marker)
+            arm_planner.pick_up(obj_list[obj_marker_id])
             # obs_list.add(obj_marker)
         # arm_planner.pick_up(reader.obj_marker)
         rate.sleep()
