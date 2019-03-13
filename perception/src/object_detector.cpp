@@ -152,16 +152,18 @@ void ObjectDetector::SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::P
 }
 
 bool ObjectDetector::checkShape(shape_msgs::SolidPrimitive shape) {
-  double object_max_dim, object_max_grab_dim;
+  double object_max_dim, object_max_grab_dim, object_min_height;
   ros::param::param("object_max_dim", object_max_dim, 0.3);
   ros::param::param("object_max_grab_dim", object_max_grab_dim, 0.1);
+  ros::param::param("object_min_height", object_min_height, 0.02);
 
   double min_xy_dim = (shape.dimensions[0] < shape.dimensions[1]) ? shape.dimensions[0] : shape.dimensions[1];
 
   return shape.dimensions[0] < object_max_dim &&
          shape.dimensions[1] < object_max_dim &&
          shape.dimensions[2] < object_max_dim &&
-         min_xy_dim < object_max_grab_dim;
+         min_xy_dim < object_max_grab_dim &&
+         shape.dimensions[2] > object_min_height;
 }
 
 void ObjectDetector::visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geometry_msgs::Pose obj_pose, size_t id) {
