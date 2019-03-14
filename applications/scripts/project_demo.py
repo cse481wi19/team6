@@ -24,49 +24,50 @@ def wait_for_time():
 # Object detection
 class ObjectMarkerReader(object):
     def __init__(self):
-        self.object_id = set()
-        self.object_marker = []
+        self.object_markers = set()
 
     def callback(self, msg):
         # Process markers only if still looking for objects
         # Ignore the msg if not looking for objects
         if msg.type == Marker.CUBE:
-            if msg.id not in self.object_id:
-                self.object_id.add(msg.id)
-                self.object_marker.append((msg, 0))
+            if msg.action == Marker.DELETE:
+                self.object_markers.remove(msg)
+            if msg.action == Marker.ADD:
+                self.object_markers.add(msg)
+            else:
+                print("Unidentified marker action...")
 
-    def report_fail(self):
-        num_tries = self.object_marker[0][1] + 1
-        if num_tries < 3:
-            self.object_marker[0] = (self.object_marker[0][0], self.object_marker[0][1])
-        else:
-            self.object_marker.pop(0)
-
-    def report_success(self):
-        self.object_marker.pop(0)
+    def get_object(self):
+        # sort markers based on distance to robot
+        sorted_markers = sorted(self.object_markers, key=lambda x: x.pose.position.x)
+        return sorted_markers[0]
 
     def object_detected(self):
-        return False and len(self.object_marker) > 0
+        return len(self.object_marker) > 0
+
 
 # Face detection
 class FaceDetector(object):
     def __init__(self):
-        self.looking = False
-        self.face_location = None
+        self.face_marker = None
 
     def callback(self, msg):
-        # Process markers only if still looking for faces
-        # Ignore the msg if not looking for faces
-        if self.looking:
-            self.face_location = PoseStamped()
-            self.face_location.header = msg.header
-            self.face_location.pose = msg.pose
+        # self.face_location = PoseStamped()
+        # self.face_location.header = msg.header
+        # self.face_location.pose = msg.pose
 
-            self.looking = False
+        if msg.position.x == 0 and msg.position.y == 0 and msg.position.z == 0:
+            # No face detected
+            self.face_marker = None
+        else:
+            self.face_marker = msg
 
-    def start_looking(self):
-        self.face_location = None
-        self.looking = True
+    def get_face(self):
+        return self.face_marker
+
+    def face_detected(self):
+        return self.face_marker is not None
+
 
 def move_random(navigator, base):
     moved = False
@@ -78,12 +79,16 @@ def move_random(navigator, base):
         cur_pose = navigator.current_pose()
         pose_baselink = navigator.transform(cur_pose, 'base_link')
 
-        target_pose = copy.deepcopy(pose_baselink)
-        target_pose.pose.position.x += MOVE_DISTANCE
+        if pose_baselink is not None:
+            target_pose = copy.deepcopy(pose_baselink)
+            target_pose.pose.position.x += MOVE_DISTANCE
+            moved = navigator.goto(target_pose, MOVE_TIMEOUT)
 
-        moved = navigator.goto(target_pose, MOVE_TIMEOUT)
-        time.sleep(3)
-        try_turn = (try_turn + 1) % len(turn)
+            if not moved:
+                try_turn = (try_turn + 1) % len(turn)
+
+        time.sleep(0.5)
+
 
 def main():
     print("Initializing...")
@@ -136,7 +141,7 @@ def main():
         while not found_object:
             print("Looking for objects...")
             head.pan_tilt(0.0, 0.8)
-            time.sleep(3)
+            time.sleep(2)
 
             if object_reader.object_detected():
                 found_object = True
@@ -144,37 +149,30 @@ def main():
             else:
                 print("Could not find object. Moving around...")
                 move_random(navigator, base)
-                time.sleep(3)
+                time.sleep(2)
                 rate.sleep()
                 print("Retrying...")
 
         # Part 2
         # Pickup object
-        #   If success, go to next step
-        #   If failure, go to Part 1
+        #   Goto the object location and attempt to pick it up
+        #       If success, go to next step
+        #       If failure, go to Part 1
         while found_object and not picked_object:
-            target_pose = PoseStamped()
-            target_pose.header = object_reader.object_marker[0][0].header
-            target_pose.pose = object_reader.object_marker[0][0].pose
-
-            pose_baselink = navigator.transform(target_pose, 'base_link')
-            target_pose = copy.deepcopy(pose_baselink)
-            target_pose.pose.position.x = max(0, target_pose.pose.position.x - 0.3)
-            target_pose.pose.position.z = 0
-            target_pose.pose.orientation = navigator.current_pose().pose.orientation
-            print(target_pose)
-
+            object = object_reader.get_object()
+            target_pose = transform_marker(object)
             reached = navigator.goto(target_pose, MOVE_TIMEOUT)
-            if reached:
-                picked_object = arm_planner.pick_up(object_reader.object_marker[0][0])
+            if not reached:
+                print("Count not reach the object. Retrying...")
+                continue
+            else:
+                picked_object = arm_planner.pick_up(object)
 
             if not picked_object:
                 print("Could not pick the object. Retrying...")
                 found_object = False
-                object_reader.report_fail()
             else:
                 print("Picked object")
-                object_reader.report_success()
 
             arm.move_to_initial_pose()
 
@@ -188,28 +186,67 @@ def main():
             face_detector.start_looking()
             time.sleep(3)
 
-            if face_detector.face_marker is not None:
+            if face_detector.face_detected():
+                face_detected = True
                 print("Found person")
-                print("Moving to person...")
-                face_detected = navigator.goto(face_detector.face_location, MOVE_TIMEOUT)
-            if not face_detected:
-                print("Could not reach the person. Retrying...")
+            else:
+                print("Could not find face. Moving around...")
                 move_random(navigator, base)
-                time.sleep(3)
+                time.sleep(2)
+                rate.sleep()
+                print("Retrying...")
 
         # Part 4
         # Wait for 5 seconds at face location and open the gripper
         # Go to Part 1
         if found_object and picked_object and face_detected:
-            print("Delivering object...")
-            time.sleep(3)
-            gripper.open()
-            found_object = False
-            picked_object = False
-            face_detected = False
-            print("Object delivered")
+            print("Moving to person...")
+            face_location = transform_marker(face_detector.get_face())
+            face_detected = navigator.goto(face_location, MOVE_TIMEOUT)
+
+            reached = navigator.goto(face_location, MOVE_TIMEOUT)
+            if not reached:
+                print("Count not reach the face. Retrying...")
+                continue
+            else:
+                print("Delivering object...")
+                time.sleep(3)
+                gripper.open()
+                found_object = False
+                picked_object = False
+                face_detected = False
+                print("Object delivered")
 
         rate.sleep()
+
+
+# Transforms marker to a PoseStamped in base link
+def transform_marker(marker):
+    target_pose = PoseStamped()
+    target_pose.header = marker.header
+    target_pose.pose = marker.pose
+
+    target_pose_baselink = None
+    while target_pose_baselink is None:
+        target_pose_baselink = navigator.transform(target_pose, 'base_link')
+        rate.sleep()
+    target_pose = copy.deepcopy(target_pose_baselink)
+    # print("target_pose", target_pose)
+
+    current_pose_baselink = None
+    if current_pose_baselink is None:
+        current_pose_baselink = navigator.transform(navigator.current_pose(), 'base_link')
+        rate.sleep()
+    # print("current_pose_baselink", curr_pose_baselink)
+
+    target_pose.pose.orientation = current_pose_baselink.pose.orientation
+    current_position_baselink = current_pose_baselink.pose.position
+    target_pose.pose.position.x = max(current_position_baselink.x, target_pose.pose.position.x - 0.4)
+    # target_pose.pose.position.y = curr_position_baselink.y
+    target_pose.pose.position.z = current_position_baselink.z
+    # print("target_pose", target_pose)
+
+    return target_pose
 
 
 if __name__ == '__main__':
