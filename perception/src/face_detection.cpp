@@ -8,7 +8,6 @@
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <time.h>
 #include <visualization_msgs/Marker.h>
 
 #include <perception/face_detector.h>
@@ -48,16 +47,12 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   }
 
   // run & time face detection
-  float start_tick = clock();
   cv::Point3d point3d;
 	// ROS_INFO("before: face 3d point: x=%f, y=%f, z=%f", point3d.x, point3d.y, point3d.z);
-
-  faceDetector.detectFace(rgb_ptr->image, depth_ptr->image, &point3d);
-  float end_tick = clock();
-
-	// ROS_INFO("after: face 3d point: x=%f, y=%f, z=%f", point3d.x, point3d.y, point3d.z);
-
-  ROS_INFO("face detection runtime: %f", (end_tick - start_tick) / CLOCKS_PER_SEC);
+  bool face_detected = faceDetector.detectFace(rgb_ptr->image, depth_ptr->image, &point3d);
+	if (!face_detected) return;
+	ROS_INFO("face detected...");
+	// ROS_INFO("after: face 3d point: x=%f, y=%f, z=%f", point3d.x, point3d.y, point3d.z);;
 
   face2d_pub.publish(rgb_ptr->toImageMsg());
 

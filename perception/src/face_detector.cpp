@@ -54,7 +54,7 @@ void FaceDetector::drawFaces(cv::Mat& rgb, std::vector<cv::Rect> faces, cv::Poin
   }
 }
 
-void FaceDetector::detectFace(cv::Mat& rgb, cv::Mat& depth, cv::Point3d* point3d) {
+bool FaceDetector::detectFace(cv::Mat& rgb, cv::Mat& depth, cv::Point3d* point3d) {
   Mat gray;
   cvtColor(rgb, gray, COLOR_BGR2GRAY);
   equalizeHist(gray, gray);
@@ -74,6 +74,8 @@ void FaceDetector::detectFace(cv::Mat& rgb, cv::Mat& depth, cv::Point3d* point3d
   // faces1.insert(faces1.end(), faces2.begin(), faces2.end());
   // faces1.insert(faces1.end(), faces3.begin(), faces3.end());
   // faces1.insert(faces1.end(), faces4.begin(), faces4.end());
+
+  if (faces4.empty()) return 0;
 
   cv::Point2d p_center;
   drawFaces(rgb, faces4, &p_center);
@@ -99,6 +101,8 @@ void FaceDetector::detectFace(cv::Mat& rgb, cv::Mat& depth, cv::Point3d* point3d
   point3d->x = p_3d.x * e_dist;
   point3d->y = p_3d.y * e_dist;
   point3d->z = p_3d.z * e_dist;
+
+  return true;
 }
 
 }
