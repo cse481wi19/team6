@@ -19,6 +19,7 @@
     object_max_dim: 0.3
     object_max_grab_dim: 0.1
     object_min_height: 0.02
+    object_pose_min_height: 0.03
   </rosparam>
 
   <node pkg="perception" type="object_detection" name="perception_object_detection" output="screen">

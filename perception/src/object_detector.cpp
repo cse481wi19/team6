@@ -45,7 +45,7 @@ void ObjectDetector::downsampleCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr clou
   ROS_INFO("Downsampled to %ld points", downsampled_cloud->size());
 }
 
-void ObjectDetector::cropCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+bool ObjectDetector::cropCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                pcl::PointCloud<pcl::PointXYZRGB>::Ptr cropped_cloud) {
 
   double min_x, min_y, min_z, max_x, max_y, max_z;
@@ -64,6 +64,9 @@ void ObjectDetector::cropCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
   crop.setMax(max_pt);
   crop.filter(*cropped_cloud);
   ROS_INFO("Cropped to %ld points", cropped_cloud->size());
+
+  if (cropped_cloud->size() > 0) return 1;
+  return 0; // rare case, but happens in simulation where the floor plane is perfectly z=0
 }
 
 void ObjectDetector::SegmentSurfaceObjects(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
@@ -151,11 +154,12 @@ void ObjectDetector::SegmentSurface(PointCloudC::Ptr cloud, pcl::PointIndices::P
   }
 }
 
-bool ObjectDetector::checkShape(shape_msgs::SolidPrimitive shape) {
-  double object_max_dim, object_max_grab_dim, object_min_height;
+bool ObjectDetector::checkShapeAndPose(shape_msgs::SolidPrimitive shape, geometry_msgs::Pose pose) {
+  double object_max_dim, object_max_grab_dim, object_min_height, object_pose_min_height;
   ros::param::param("object_max_dim", object_max_dim, 0.3);
   ros::param::param("object_max_grab_dim", object_max_grab_dim, 0.1);
   ros::param::param("object_min_height", object_min_height, 0.02);
+  ros::param::param("object_pose_min_height", object_pose_min_height, 0.03);
 
   double min_xy_dim = (shape.dimensions[0] < shape.dimensions[1]) ? shape.dimensions[0] : shape.dimensions[1];
 
@@ -163,23 +167,19 @@ bool ObjectDetector::checkShape(shape_msgs::SolidPrimitive shape) {
          shape.dimensions[1] < object_max_dim &&
          shape.dimensions[2] < object_max_dim &&
          min_xy_dim < object_max_grab_dim &&
-         shape.dimensions[2] > object_min_height;
+         shape.dimensions[2] > object_min_height &&
+         pose.position.z > object_pose_min_height;
 }
 
-void ObjectDetector::visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geometry_msgs::Pose obj_pose, size_t id) {
-  // Publish a bounding box marker around the object
-  visualization_msgs::Marker object_marker;
-  object_marker.ns = "objects";
-  object_marker.id = id;
-  object_marker.header.frame_id = "base_link";
-  object_marker.type = visualization_msgs::Marker::CUBE;
+void ObjectDetector::visualizeNewObjects(shape_msgs::SolidPrimitive shape, geometry_msgs::Pose obj_pose, size_t id,
+                                          visualization_msgs::Marker& object_marker, visualization_msgs::Marker& orient_marker) {
 
   // publish an arrow marker that shows object orientation
-  visualization_msgs::Marker orient_marker;
   orient_marker.ns = "orientations";
   orient_marker.id = id;
   orient_marker.header.frame_id = "base_link";
   orient_marker.type = visualization_msgs::Marker::ARROW;
+  orient_marker.action = visualization_msgs::Marker::ADD;
   orient_marker.pose = obj_pose;
 
   orient_marker.scale.x = 0.2;
@@ -189,6 +189,12 @@ void ObjectDetector::visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geom
   orient_marker.color.a = 1;
   marker_pub_.publish(orient_marker);
 
+  // Publish a bounding box marker around the object
+  object_marker.ns = "objects";
+  object_marker.id = id;
+  object_marker.header.frame_id = "base_link";
+  object_marker.type = visualization_msgs::Marker::CUBE;
+  object_marker.action = visualization_msgs::Marker::ADD;
   object_marker.pose = obj_pose;
 
   object_marker.scale.x = shape.dimensions[0];
@@ -197,7 +203,16 @@ void ObjectDetector::visualizeBoundingBox(shape_msgs::SolidPrimitive shape, geom
 
   object_marker.color.g = 1;
   object_marker.color.a = 1;
+
   marker_pub_.publish(object_marker);
+}
+
+void ObjectDetector::deleteOldObjects(std::vector<visualization_msgs::Marker>& objects) {
+  for (size_t i = 0; i < objects.size(); ++i) {
+      visualization_msgs::Marker object_marker = objects[i];
+      object_marker.action = visualization_msgs::Marker::DELETE;
+      marker_pub_.publish(object_marker);
+  }
 }
 
 void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
@@ -227,7 +242,11 @@ void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
   PointCloudC::Ptr cropped_cloud(new PointCloudC());
   PointCloudC::Ptr downsampled_cloud(new PointCloudC());
 
-  cropCloud(cloud, cropped_cloud);
+  bool has_data = cropCloud(cloud, cropped_cloud);
+  if (!has_data) {
+    ROS_INFO("Cropped cloud has no point, detection skipped...");
+    return;
+  }
   downsampleCloud(cropped_cloud, downsampled_cloud);
 
   pcl::PointIndices::Ptr surface_inliers(new pcl::PointIndices());
@@ -242,7 +261,13 @@ void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
   pcl::ExtractIndices<PointC> extract;
   extract.setInputCloud(downsampled_cloud);
 
-  // visualize each object!
+  // delete old objects
+  deleteOldObjects(prev_objects);
+  prev_objects.clear();
+
+  // visualize new objects!
+  std::vector<visualization_msgs::Marker> cur_objects;
+
   for (size_t i = 0; i < object_indices.size(); ++i) {
     // Reify indices into a point cloud of the object.
     pcl::PointIndices::Ptr indices(new pcl::PointIndices);
@@ -259,10 +284,16 @@ void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
     FitBox(*object_cloud, coeff, *extract_out, shape, obj_pose);
 
     // filter objects with dimensions that are too large to grasp
-    if (!checkShape(shape)) continue;
+    if (!checkShapeAndPose(shape, obj_pose)) continue;
 
-    visualizeBoundingBox(shape, obj_pose, i);
+    visualization_msgs::Marker object_marker, orient_marker;
+    visualizeNewObjects(shape, obj_pose, i, object_marker, orient_marker);
+
+    cur_objects.push_back(object_marker);
+    cur_objects.push_back(orient_marker);
   }
+
+  prev_objects = cur_objects;
 }
 
 }  // namespace perception
