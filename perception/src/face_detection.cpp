@@ -50,8 +50,6 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   cv::Point3d point3d;
 	// ROS_INFO("before: face 3d point: x=%f, y=%f, z=%f", point3d.x, point3d.y, point3d.z);
   bool face_detected = faceDetector.detectFace(rgb_ptr->image, depth_ptr->image, &point3d);
-	if (!face_detected) return;
-	ROS_INFO("face detected...");
 	// ROS_INFO("after: face 3d point: x=%f, y=%f, z=%f", point3d.x, point3d.y, point3d.z);;
 
   face2d_pub.publish(rgb_ptr->toImageMsg());
@@ -63,9 +61,14 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   face_marker.header.frame_id = camera_info->header.frame_id;
   face_marker.type = visualization_msgs::Marker::CUBE;
 
-  face_marker.pose.position.x = point3d.x;
-  face_marker.pose.position.y = point3d.y;
-  face_marker.pose.position.z = point3d.z;
+	if (face_detected) {
+		ROS_INFO("face detected...");
+		face_marker.pose.position.x = point3d.x;
+	  face_marker.pose.position.y = point3d.y;
+	  face_marker.pose.position.z = point3d.z;
+	} else {
+		ROS_INFO("NO face detected...");
+	}
   face_marker.pose.orientation.w = 1; // the identity orientation;
 
   face_marker.scale.x = 0.1;
@@ -73,6 +76,7 @@ void Demor::callback(const sensor_msgs::ImageConstPtr& rgb, const sensor_msgs::I
   face_marker.scale.z = 0.03;
   face_marker.color.g = 1;
   face_marker.color.a = 1;
+	
   marker_pub.publish(face_marker);
 }
 
