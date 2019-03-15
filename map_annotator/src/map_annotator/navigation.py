@@ -64,7 +64,8 @@ class Navigator(object):
         obj_in_from = pose_to_transform(from_ps.pose)
         trans, rot = self.load_tf(to_frameid, from_ps.header.frame_id, timeout)
         if trans is None or rot is None:
-            print("failed to load tf")
+            # print("failed to load tf from", from_ps.header.frame_id, "to", to_frameid)
+            # raise Exception()
             return None
         tf_pose = Pose()
         tf_pose.position.x = trans[0]
@@ -90,11 +91,10 @@ class Navigator(object):
         except:
             return (None, None)
 
-    def load_tf_in_map(self, tgt_frame, timeout):
-        if tgt_frame not in self.transforms:
-            self.tf_listener.waitForTransform('map', tgt_frame, rospy.Time(), rospy.Duration(secs=4))
-
+    def load_tf_in_map(self, tgt_frame, timeout=2):
         try:
+            self.tf_listener.waitForTransform('map', tgt_frame, rospy.Time(), rospy.Duration(secs=timeout))
+            now = rospy.Time.now()
             self.tf_listener.waitForTransform('map', tgt_frame, now, rospy.Duration(secs=timeout))
             tf_res = self.tf_listener.lookupTransform('map', tgt_frame, now)
             self.transforms[tgt_frame] = tf_res

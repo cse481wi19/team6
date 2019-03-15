@@ -223,3 +223,7 @@ class Arm(object):
     def move_to_initial_pose(self):
         joints_pose = ArmJoints.from_list([1.3, 1.4, -0.2, 1.7, 0.0, 1.7, 0.0])
         self.move_to_joints(joints_pose)
+
+    def move_to_hold_pose(self):
+        joints_pose = ArmJoints.from_list([1.1, 1.5, -3.0, 2.3, 0.03, 0.95, 0.063])
+        self.move_to_joints(joints_pose)
