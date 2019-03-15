@@ -21,29 +21,38 @@ def wait_for_time():
     while rospy.Time().now().to_sec() == 0:
         pass
 
+def get_distance(msg):
+    x = msg.pose.position.x ** 2
+    y = msg.pose.position.y ** 2
+    return (x + y) ** (0.5)
+
 # Object detection
 class ObjectMarkerReader(object):
     def __init__(self):
-        self.object_markers = set()
+        self.object_markers = {}
 
     def callback(self, msg):
         # Process markers only if still looking for objects
         # Ignore the msg if not looking for objects
         if msg.type == Marker.CUBE:
             if msg.action == Marker.DELETE:
-                self.object_markers.remove(msg)
-            if msg.action == Marker.ADD:
-                self.object_markers.add(msg)
+                self.object_markers.pop(msg.id, None)
+            elif msg.action == Marker.ADD:
+                self.object_markers[msg.id] = msg
             else:
-                print("Unidentified marker action...")
+                print("Unidentified marker action...", msg.action)
+            # self.object_markers[msg.id] = msg
 
-    def get_object(self):
+    def get_object(self, id=None):
         # sort markers based on distance to robot
-        sorted_markers = sorted(self.object_markers, key=lambda x: x.pose.position.x)
+        if id is not None:
+            return self.object_markers.get(id, None)
+
+        sorted_markers = sorted(self.object_markers.values(), key=lambda x: x.pose.position.x)
         return sorted_markers[0]
 
     def object_detected(self):
-        return len(self.object_marker) > 0
+        return len(self.object_markers) > 0
 
 
 # Face detection
@@ -74,6 +83,7 @@ def move_random(navigator, base):
 
     turn = [0, math.pi / 2, - math.pi]
     try_turn = 0
+    rate = rospy.Rate(1)
     while not moved:
         base.turn(turn[try_turn])
         cur_pose = navigator.current_pose()
@@ -86,7 +96,7 @@ def move_random(navigator, base):
 
             if not moved:
                 try_turn = (try_turn + 1) % len(turn)
-
+        rate.sleep()
         time.sleep(0.5)
 
 
@@ -130,7 +140,7 @@ def main():
 
     rospy.sleep(1)
 
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(0.5)
 
     print("Initialized")
     while not rospy.is_shutdown():
@@ -140,8 +150,9 @@ def main():
         #   If not found, roam around and repeat
         while not found_object:
             print("Looking for objects...")
-            head.pan_tilt(0.0, 0.8)
-            time.sleep(2)
+            head.pan_tilt(0.0, 1.0)
+            time.sleep(5)
+            rate.sleep()
 
             if object_reader.object_detected():
                 found_object = True
@@ -153,6 +164,9 @@ def main():
                 rate.sleep()
                 print("Retrying...")
 
+            time.sleep(3)
+            rate.sleep()
+
         # Part 2
         # Pickup object
         #   Goto the object location and attempt to pick it up
@@ -160,21 +174,39 @@ def main():
         #       If failure, go to Part 1
         while found_object and not picked_object:
             object = object_reader.get_object()
-            target_pose = transform_marker(object)
-            reached = navigator.goto(target_pose, MOVE_TIMEOUT)
+            target_pose = transform_marker(navigator, object)
+            reached = True
+            if target_pose == None:
+                reached = True
+            else:
+                reached = navigator.goto(target_pose, MOVE_TIMEOUT)
+
+
             if not reached:
                 print("Count not reach the object. Retrying...")
                 continue
             else:
-                picked_object = arm_planner.pick_up(object)
-
+                head.pan_tilt(0.0, 1.0)
+                time.sleep(5)
+                rate.sleep()
+                object_to_pick = object_reader.get_object(object.id)
+                if object_to_pick is None:
+                    print("Object Gone...")
+                    found_object = False
+                    arm.move_to_initial_pose()
+                    continue
+                print(object_to_pick)
+                arm.move_to_hold_pose()
+                picked_object = arm_planner.pick_up(object_to_pick)
             if not picked_object:
                 print("Could not pick the object. Retrying...")
                 found_object = False
+                arm.move_to_initial_pose()
             else:
                 print("Picked object")
+                arm.move_to_hold_pose()
 
-            arm.move_to_initial_pose()
+
 
         # Part 3
         # Look for face
@@ -183,7 +215,6 @@ def main():
         while found_object and picked_object and not face_detected:
             print("Looking for people...")
             head.pan_tilt(0.0, 0.0)
-            face_detector.start_looking()
             time.sleep(3)
 
             if face_detector.face_detected():
@@ -197,11 +228,12 @@ def main():
                 print("Retrying...")
 
         # Part 4
-        # Wait for 5 seconds at face location and open the gripper
+        # Go to the face location
+        # Wait for 5 seconds and open the gripper
         # Go to Part 1
         if found_object and picked_object and face_detected:
             print("Moving to person...")
-            face_location = transform_marker(face_detector.get_face())
+            face_location = transform_marker(navigator, face_detector.get_face())
             face_detected = navigator.goto(face_location, MOVE_TIMEOUT)
 
             reached = navigator.goto(face_location, MOVE_TIMEOUT)
@@ -216,12 +248,14 @@ def main():
                 picked_object = False
                 face_detected = False
                 print("Object delivered")
+                arm.move_to_initial_pose()
 
         rate.sleep()
 
 
 # Transforms marker to a PoseStamped in base link
-def transform_marker(marker):
+def transform_marker(navigator, marker):
+    rate = rospy.Rate(2)
     target_pose = PoseStamped()
     target_pose.header = marker.header
     target_pose.pose = marker.pose
@@ -231,20 +265,24 @@ def transform_marker(marker):
         target_pose_baselink = navigator.transform(target_pose, 'base_link')
         rate.sleep()
     target_pose = copy.deepcopy(target_pose_baselink)
-    # print("target_pose", target_pose)
+    print("target_pose_start", target_pose.pose.position.x)
 
     current_pose_baselink = None
-    if current_pose_baselink is None:
+    while current_pose_baselink is None:
         current_pose_baselink = navigator.transform(navigator.current_pose(), 'base_link')
         rate.sleep()
-    # print("current_pose_baselink", curr_pose_baselink)
+    print("current_pose_baselink", current_pose_baselink.pose.position.x)
 
     target_pose.pose.orientation = current_pose_baselink.pose.orientation
     current_position_baselink = current_pose_baselink.pose.position
-    target_pose.pose.position.x = max(current_position_baselink.x, target_pose.pose.position.x - 0.4)
+    target_pose.pose.position.x = max(current_position_baselink.x, target_pose.pose.position.x - 0.55)
+
+
+    print("target_pose_final", target_pose.pose.position.x)
+    if target_pose.pose.position.x == current_position_baselink.x:
+        return None
     # target_pose.pose.position.y = curr_position_baselink.y
     target_pose.pose.position.z = current_position_baselink.z
-    # print("target_pose", target_pose)
 
     return target_pose
 
