@@ -65,7 +65,11 @@ bool ObjectDetector::cropCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
   crop.filter(*cropped_cloud);
   ROS_INFO("Cropped to %ld points", cropped_cloud->size());
 
-  if (cropped_cloud->size() > 0) return 1;
+
+  int min_cloud_size;
+  ros::param::param("min_cloud_size", min_cloud_size, 100);
+
+  if (cropped_cloud->size() > min_cloud_size) return 1;
   return 0; // rare case, but happens in simulation where the floor plane is perfectly z=0
 }
 
@@ -244,7 +248,7 @@ void ObjectDetector::Callback(const sensor_msgs::PointCloud2& msg) {
 
   bool has_data = cropCloud(cloud, cropped_cloud);
   if (!has_data) {
-    ROS_INFO("Cropped cloud has no point, detection skipped...");
+    ROS_INFO("Cropped cloud doesn't have enough points, detection skipped...");
     return;
   }
   downsampleCloud(cropped_cloud, downsampled_cloud);
