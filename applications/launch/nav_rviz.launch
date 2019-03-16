@@ -4,7 +4,8 @@
   <include file="$(find fetch_navigation)/launch/fetch_nav.launch">
     <arg name="map_file" value="$(arg map_file)" />
   </include>
-  <node pkg="rviz" type="rviz" name="$(anon rviz)" args="-d $(find applications)/config/project_demo.rviz" />
+  <node pkg="rviz" type="rviz" name="$(anon nav_rviz)" args="-d $(find applications)/config/project_demo.rviz" />
+  <node pkg="rviz" type="rviz" name="$(anon detection_rviz)" args="-d $(find applications)/config/project_demo_lite.rviz" />
   <!-- <node pkg="web_teleop" type="actuators_node.py" name="web_teleop_actuators" />
   <node pkg="web_video_server" type="web_video_server" name="web_video_server">
     <param name="port" value="8000" />

@@ -225,5 +225,5 @@ class Arm(object):
         self.move_to_joints(joints_pose)
 
     def move_to_hold_pose(self):
-        joints_pose = ArmJoints.from_list([1.1, 1.5, -3.0, 2.3, 0.03, 0.95, 0.063])
+        joints_pose = ArmJoints.from_list([1.1, 1.5, -3.0, 2.3, 0.03, 0.95, 0.06])
         self.move_to_joints(joints_pose)
