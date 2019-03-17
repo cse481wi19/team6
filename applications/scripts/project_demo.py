@@ -12,7 +12,7 @@ from robot_api import ArmMotionPlanner
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import PoseStamped
 
-MOVE_DISTANCE = 0.5
+MOVE_DISTANCE = 0.4
 MOVE_TIMEOUT = 10
 
 def wait_for_time():
@@ -49,6 +49,8 @@ class ObjectMarkerReader(object):
             return self.object_markers.get(id, None)
 
         sorted_markers = sorted(self.object_markers.values(), key=lambda x: x.pose.position.x)
+        if len(sorted_markers) == 0:
+            return None
         return sorted_markers[0]
 
     def object_detected(self):
@@ -86,6 +88,8 @@ def move_random(navigator, base):
     rate = rospy.Rate(1)
     while not moved:
         base.turn(turn[try_turn])
+        if try_turn is not 0:
+            break
         cur_pose = navigator.current_pose()
         pose_baselink = navigator.transform(cur_pose, 'base_link')
 
@@ -98,6 +102,7 @@ def move_random(navigator, base):
                 try_turn = (try_turn + 1) % len(turn)
         rate.sleep()
         time.sleep(0.5)
+
 
 
 def main():
@@ -151,7 +156,7 @@ def main():
         while not found_object:
             print("Looking for objects...")
             head.pan_tilt(0.0, 1.0)
-            time.sleep(5)
+            time.sleep(10)
             rate.sleep()
 
             if object_reader.object_detected():
@@ -174,6 +179,11 @@ def main():
         #       If failure, go to Part 1
         while found_object and not picked_object:
             object = object_reader.get_object()
+            if object is None:
+                print("Detected Object Gone...")
+                found_object = False
+                arm.move_to_initial_pose()
+                continue
             target_pose = transform_marker(navigator, object)
             reached = True
             if target_pose == None:
@@ -183,11 +193,11 @@ def main():
 
 
             if not reached:
-                print("Count not reach the object. Retrying...")
+                print("Could not reach the object. Retrying...")
                 continue
             else:
                 head.pan_tilt(0.0, 1.0)
-                time.sleep(5)
+                time.sleep(10)
                 rate.sleep()
                 object_to_pick = object_reader.get_object(object.id)
                 if object_to_pick is None:
@@ -273,18 +283,22 @@ def transform_marker(navigator, marker):
         rate.sleep()
     print("current_pose_baselink", current_pose_baselink.pose.position.x)
 
-    target_pose.pose.orientation = current_pose_baselink.pose.orientation
+    final_target_pose = copy.deepcopy(current_pose_baselink)
+    move_dist_x = max(0, target_pose.pose.position.x - 0.55)
+    final_target_pose.pose.position.x += move_dist_x
+    move_dist_y = max(0, target_pose.pose.position.y - current_pose_baselink.pose.position.y)
+    final_target_pose.pose.position.y += move_dist_y
+    # target_pose.pose.orientation = current_pose_baselink.pose.orientation
     current_position_baselink = current_pose_baselink.pose.position
-    target_pose.pose.position.x = max(current_position_baselink.x, target_pose.pose.position.x - 0.55)
+    # target_pose.pose.position.x = max(current_position_baselink.x, target_pose.pose.position.x - 0.55)
 
-
-    print("target_pose_final", target_pose.pose.position.x)
-    if target_pose.pose.position.x == current_position_baselink.x:
+    print("target_pose_final", final_target_pose.pose.position.x)
+    if final_target_pose.pose.position.x == current_position_baselink.x:
         return None
     # target_pose.pose.position.y = curr_position_baselink.y
-    target_pose.pose.position.z = current_position_baselink.z
+    # target_pose.pose.position.z = current_position_baselink.z
 
-    return target_pose
+    return final_target_pose
 
 
 if __name__ == '__main__':

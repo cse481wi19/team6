@@ -150,7 +150,7 @@ class ArmMotionPlanner(object):
             print("grasp failed")
             self.remove_obstacles(obs_marker_list)
             return False
-        print(grasp_ps)
+        # print(grasp_ps)
         error = self._arm.move_to_pose(grasp_ps, **kwargs)
         if error is not None:
             rospy.logerr(error)

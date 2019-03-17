@@ -146,22 +146,23 @@ def main():
     print("Initializing navigation...")
     navigator = Navigator()
 
-    rospy.sleep(1)
     print("Initialized")
 
     while not rospy.is_shutdown():
         # Part 1
         # Look for objects
         #   If not found, turn around and repeat
+        head.pan_tilt(0.0, 0.85)
+        rospy.sleep(1)  # wait extra time after tilting for the first point cloud to arrive
+        # #
         head.pan_tilt(0.0, 0.9)
-
         TURN_STEPS = 10
         angular_distance = 2*math.pi / TURN_STEPS
         object_marker = None
         while True:
             print("Looking for objects...")
-            rospy.sleep(5)
-
+            rospy.sleep(8)
+            # time.sleep(2)
             if object_reader.object_detected():
                 print("Found object")
                 object_marker = object_reader.get_object()
@@ -194,7 +195,8 @@ def main():
         #   If not found, turn around and repeat
         head.pan_tilt(0.0, 0.0)
         face_detected = False
-        face_marker = None
+        face_location = None
+        max_dist = 3
         while True:
             print("Looking for people...")
             rospy.sleep(5)
@@ -202,9 +204,14 @@ def main():
             if face_detector.face_detected():
                 print("Found person")
                 face_marker = face_detector.get_face()
-                break
+                face_location = transform_marker(navigator, face_marker)
+                if face_location.pose.position.x < max_dist:
+                    break
+                print("Person out of range...")
+            else:
+                print("Could not find face...")
 
-            print("Could not find face. turning around...")
+            print("Turning around...")
             base.turn(angular_distance)
             print("Retrying...")
 
@@ -214,21 +221,20 @@ def main():
         # Wait for 5 seconds and open the gripper
         # Go to Part 1
         while True:
-            face_location = transform_marker(navigator, face_marker)
-            if face_location is None:
-                print("Person is in deliverable range, no need to move...")
-            else:
-                print("Moving to person...")
-                reached = navigator.goto(face_location, MOVE_TIMEOUT)
-                if not reached:
-                    print("Could not reach the face. Retrying...")
-                    continue
+            print("Moving to person...")
+            reached = go_forward(navigator, base, face_location)
+            # reached = go_to(navigator, face_location)
+            if not reached:
+                print("Could not reach the face. Retrying...")
+                # face_location.pose.position.x -= 0.05
+                # print("updated face_location_baselink x:", face_location.pose.position.x)
+                continue
 
             print("Delivering object...")
-            time.sleep(3)
+            time.sleep(5)
             gripper.open()
             print("Object delivered")
-            arm.move_to_initial_pose()
+            # arm.move_to_initial_pose()
 
             print("Demo lite round 1 complete...")
             return
@@ -245,31 +251,75 @@ def transform_marker(navigator, marker):
     while target_pose_baselink is None:
         target_pose_baselink = navigator.transform(target_pose, 'base_link')
         rate.sleep()
-    target_pose = copy.deepcopy(target_pose_baselink)
-    print("target_pose_start", target_pose.pose.position.x)
 
-    current_pose_baselink = None
-    while current_pose_baselink is None:
-        current_pose_baselink = navigator.transform(navigator.current_pose(), 'base_link')
+    print("target_pose_baselink x: ", target_pose_baselink.pose.position.x)
+    print("target_pose_baselink y: ", target_pose_baselink.pose.position.y)
+
+    return target_pose_baselink
+
+
+def go_forward(navigator, base, location_pose, offset=0.9):
+    rate = rospy.Rate(2)
+    cur_pose = navigator.current_pose()
+    # print("cur_pose", cur_pose)
+    cur_pose_baselink = None
+    while cur_pose_baselink is None:
+        cur_pose_baselink = navigator.transform(cur_pose, 'base_link')
         rate.sleep()
-    print("current_pose_baselink", current_pose_baselink.pose.position.x)
+    print("cur_pose_baselink", cur_pose_baselink)
+    # target_pose = copy.deepcopy(pose_baselink)
+    dist = location_pose.pose.position.x - offset - cur_pose_baselink.pose.position.x
+    dist = max(0, dist)
+    base.go_forward(dist)
+    return True
 
-    final_target_pose = copy.deepcopy(current_pose_baselink)
-    move_dist_x = max(0, target_pose.pose.position.x - 0.55)
-    final_target_pose.pose.position.x += move_dist_x
-    # move_dist_y = max(0, target_pose.pose.position.y - current_pose_baselink.pose.position.y)
-    # final_target_pose.pose.position.y += move_dist_y
-    # target_pose.pose.orientation = current_pose_baselink.pose.orientation
-    # current_position_baselink =
-    # target_pose.pose.position.x = max(current_position_baselink.x, target_pose.pose.position.x - 0.55)
+def go_to(navigator, location_pose, offset=0.8, timeout=10):
+    rate = rospy.Rate(2)
+    cur_pose = navigator.current_pose()
+    print("cur_pose", cur_pose)
+    curr_pose_baselink = None
+    while curr_pose_baselink is None:
+        curr_pose_baselink = navigator.transform(cur_pose, 'base_link')
+        rate.sleep()
 
-    # print("target_pose_finasl", final_target_pose.pose.position.x)
-    if final_target_pose.pose.position.x == current_pose_baselink.pose.position.x:
-        return None
-    # target_pose.pose.position.y = curr_position_baselink.y
-    # target_pose.pose.position.z = current_position_baselink.z
+    print("curr_pose_baselink", curr_pose_baselink)
+    # target_pose = copy.deepcopy(pose_baselink)
+    goto_dist = location_pose.pose.position.x - offset
+    print("goto_dist", goto_dist)
+    curr_pose_baselink.pose.position.x = max(0, goto_dist)
+    curr_pose_baselink.pose.position.y = location_pose.pose.position.y
+    print("pose_baselink", curr_pose_baselink)
+    # target_pose.pose.position.x += dist
+    return navigator.goto(curr_pose_baselink, timeout)
 
-    return final_target_pose
+
+    # target_pose = copy.deepcopy(target_pose_baselink)
+    # # print("target_pose_start", target_pose.pose.position.x)
+    #
+    # current_pose_baselink = None
+    # while current_pose_baselink is None:
+    #     current_pose_baselink = navigator.transform(navigator.current_pose(), 'base_link')
+    #     rate.sleep()
+    # print("current_pose_baselink x: ", current_pose_baselink.pose.position.x)
+    #
+    # goto_pose_baselink = copy.deepcopy(current_pose_baselink)
+    # move_dist_x = max(0, target_pose.pose.position.x - offset)
+    # goto_pose_baselink.pose.position.x += move_dist_x
+    # # move_dist_y = max(0, target_pose.pose.position.y - current_pose_baselink.pose.position.y)
+    # # goto_pose_baselink.pose.position.y += move_dist_y
+    # # target_pose.pose.orientation = current_pose_baselink.pose.orientation
+    # # current_position_baselink =
+    # # target_pose.pose.position.x = max(current_position_baselink.x, target_pose.pose.position.x - 0.55)
+    #
+    # if goto_pose_baselink.pose.position.x == current_pose_baselink.pose.position.x:
+    #     return None
+    # # target_pose.pose.position.y = curr_position_baselink.y
+    # # target_pose.pose.position.z = current_position_baselink.z
+    #
+    # print("goto_pose_baselink x: ", goto_pose_baselink.pose.position.x)
+    # print("goto_pose_baselink y: ", goto_pose_baselink.pose.position.y)
+    #
+    # return goto_pose_baselink  # in base_link
 
 
 if __name__ == '__main__':

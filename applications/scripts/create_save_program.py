@@ -70,98 +70,99 @@ def main():
     print('Welcome to the gripper program!\n')
     print_usage()
     rospy.sleep(0.5)
-
+    control_client = actionlib.SimpleActionClient("/query_controller_states", robot_controllers_msgs.msg.QueryControllerStatesAction)
+    # TODO: Wait for server
+    control_client.wait_for_server()
     goal = QueryControllerStatesGoal()
     state = ControllerState()
     state.name = 'arm_controller/follow_joint_trajectory'
     state.state = ControllerState.STOPPED
     goal.updates.append(state)
-    control_client = actionlib.SimpleActionClient("/query_controller_states", robot_controllers_msgs.msg.QueryControllerStatesAction)
-    # TODO: Wait for server
-    control_client.wait_for_server()
+
     control_client.send_goal(goal)
     control_client.wait_for_result()
 
-    program = gripper_program.GripperProgram()
-    gripper = robot_api.Gripper()
-    gripper_open = True
-    tf_listener = tf.TransformListener()
-    reader = ArTagReader()
-    marker_sub = rospy.Subscriber('ar_pose_marker', AlvarMarkers, callback=reader.callback) # Subscribe to AR tag poses, use reader.callback
+    # program = gripper_program.GripperProgram()
+    # gripper = robot_api.Gripper()
+    # gripper_open = True
+    # tf_listener = tf.TransformListener()
+    # reader = ArTagReader()
+    # marker_sub = rospy.Subscriber('ar_pose_marker', AlvarMarkers, callback=reader.callback) # Subscribe to AR tag poses, use reader.callback
+    #
+    # rate = rospy.Rate(10)
+    #
+    # while True :
+    #     print('\n> '),
+    #     l = sys.stdin.readline().split()
+    #     c = l[0]
+    #     name = None
+    #     if len(l) > 1:
+    #         name = ' '.join(l[1:])
+    #
+    #     if c == 'q':
+    #         break
+    #     elif c == 'help':
+    #         print_usage()
+    #     elif c == '1':
+    #         program.create_program()
+    #         gripper.open()
+    #         gripper_open = True
+    #         print("program created")
+    #     elif c == '2':
+    #         print("You have the following options as reference frame:")
+    #         reader.print_marker_id()
+    #         print('frame: '),
+    #         l = sys.stdin.readline().split()
+    #         c = l[0]
+    #         if c not in reader.markers and c is not 'base_link':
+    #             print("reference name not found")
+    #             continue
+    #         # l = sys.stdin.readline().split()
+    #         now = rospy.Time.now()
+    #         tf_listener.waitForTransform('base_link', 'wrist_roll_link', now, rospy.Duration(4.0))
+    #         trans, rot = tf_listener.lookupTransform('base_link', 'wrist_roll_link', now)
+    #
+    #         ps = PoseStamped()
+    #         ps.header.frame_id = 'base_link'
+    #         pose = Pose()
+    #         pose.position.x = trans[0]
+    #         pose.position.y = trans[1]
+    #         pose.position.z = trans[2]
+    #
+    #         pose.orientation.x = rot[0]
+    #         pose.orientation.y = rot[1]
+    #         pose.orientation.z = rot[2]
+    #         pose.orientation.w = rot[3]
+    #
+    #         if c in reader.markers:
+    #             gripper_pos_tf = pose_to_transform(pose)
+    #             dest_marker_tf = pose_to_transform(reader.markers[c].pose.pose)
+    #             inverse = np.matrix(dest_marker_tf).I
+    #             result_tf = np.dot(inverse, gripper_pos_tf)
+    #             ps.header.frame_id = c
+    #             ps.pose = transform_to_pose(result_tf)
+    #         else:
+    #             ps.pose = pose
+    #
+    #         program.save_pose(ps, gripper_open)
+    #         print("pose saved")
+    #     elif c == '3':
+    #         gripper.open()
+    #         gripper_open = True
+    #         print("gripper opened")
+    #     elif c == '4':
+    #         gripper.close(robot_api.Gripper.MAX_EFFORT)
+    #         gripper_open = False
+    #         print("gripper closed")
+    #     elif c == '5':
+    #         if name is None:
+    #             print("save program requires a name")
+    #             continue
+    #         program.save_program(name)
+    #         print("program saved")
 
-    rate = rospy.Rate(10)
-
-    while True :
-        print('\n> '),
-        l = sys.stdin.readline().split()
-        c = l[0]
-        name = None
-        if len(l) > 1:
-            name = ' '.join(l[1:])
-
-        if c == 'q':
-            break
-        elif c == 'help':
-            print_usage()
-        elif c == '1':
-            program.create_program()
-            gripper.open()
-            gripper_open = True
-            print("program created")
-        elif c == '2':
-            print("You have the following options as reference frame:")
-            reader.print_marker_id()
-            print('frame: '),
-            l = sys.stdin.readline().split()
-            c = l[0]
-            if c not in reader.markers and c is not 'base_link':
-                print("reference name not found")
-                continue
-            # l = sys.stdin.readline().split()
-            now = rospy.Time.now()
-            tf_listener.waitForTransform('base_link', 'wrist_roll_link', now, rospy.Duration(4.0))
-            trans, rot = tf_listener.lookupTransform('base_link', 'wrist_roll_link', now)
-
-            ps = PoseStamped()
-            ps.header.frame_id = 'base_link'
-            pose = Pose()
-            pose.position.x = trans[0]
-            pose.position.y = trans[1]
-            pose.position.z = trans[2]
-
-            pose.orientation.x = rot[0]
-            pose.orientation.y = rot[1]
-            pose.orientation.z = rot[2]
-            pose.orientation.w = rot[3]
-
-            if c in reader.markers:
-                gripper_pos_tf = pose_to_transform(pose)
-                dest_marker_tf = pose_to_transform(reader.markers[c].pose.pose)
-                inverse = np.matrix(dest_marker_tf).I
-                result_tf = np.dot(inverse, gripper_pos_tf)
-                ps.header.frame_id = c
-                ps.pose = transform_to_pose(result_tf)
-            else:
-                ps.pose = pose
-
-            program.save_pose(ps, gripper_open)
-            print("pose saved")
-        elif c == '3':
-            gripper.open()
-            gripper_open = True
-            print("gripper opened")
-        elif c == '4':
-            gripper.close(robot_api.Gripper.MAX_EFFORT)
-            gripper_open = False
-            print("gripper closed")
-        elif c == '5':
-            if name is None:
-                print("save program requires a name")
-                continue
-            program.save_program(name)
-            print("program saved")
-
-        rate.sleep()
+        # rate.sleep()
+    rospy.spin()
 
 if __name__ == '__main__':
     main()

@@ -38,6 +38,7 @@ class Navigator(object):
     def __init__(self):
         # self.pub =  rospy.Publisher('move_base/goal', MoveBaseActionGoal, queue_size=5)
         self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.pub =  rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=5)
         self.curr_pose = None
         self._amcl_sub = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, callback=self._amcl_callback)
         self.tf_listener = tf.TransformListener()
@@ -103,7 +104,10 @@ class Navigator(object):
             return False
 
 
-    def goto(self, goal, timeout):
+    def goto_simple(self, goal):
+        self.pub.publish(goal)
+
+    def goto(self, goal, timeout=20):
         # print(goal)
         tgt_frame = goal.header.frame_id
         if tgt_frame != 'map':
@@ -131,7 +135,8 @@ class Navigator(object):
             tgt_in_tgt_frame = pose_to_transform(goal.pose)
             tgt_in_map = np.dot(tgt_frame_in_map, tgt_in_tgt_frame)
             move_base_goal.target_pose.pose = transform_to_pose(tgt_in_map)
-        # print(move_base_goal.target_pose)
+        print("target pose in map", move_base_goal.target_pose.pose)
+        move_base_goal.target_pose = goal # testing code
         self.move_base.send_goal(move_base_goal)
     	success = self.move_base.wait_for_result(rospy.Duration(timeout))
         state = self.move_base.get_state()

@@ -237,8 +237,7 @@ Visualization Manager:
       Marker Topic: /object_markers
       Name: object_markers
       Namespaces:
-        objects: true
-        orientations: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Axes
@@ -366,15 +365,15 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.930716
-        Y: -0.183905
-        Z: 0.658741
+        X: 1.69225
+        Y: -1.33218
+        Z: 0.588003
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.590198
+      Pitch: 0.825198
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.82517
+      Yaw: 3.46516
     Saved: ~
 Window Geometry:
   Displays:
