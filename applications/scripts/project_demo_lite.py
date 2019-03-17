@@ -196,7 +196,7 @@ def main():
         head.pan_tilt(0.0, 0.0)
         face_detected = False
         face_location = None
-        max_dist = 3
+        max_dist = 2.5
         while True:
             print("Looking for people...")
             rospy.sleep(5)
